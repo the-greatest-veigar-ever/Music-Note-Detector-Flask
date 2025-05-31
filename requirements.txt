@@ -1,0 +1,69 @@
+# Music Note Detector - Flask Application Requirements
+# Optimized for real-time voice detection and audio file analysis
+# Python 3.8+ Compatible
+
+# ===========================================
+# Core Web Framework
+# ===========================================
+Flask==3.0.0                        # Modern web application framework
+Flask-CORS==4.0.0                   # Cross-Origin Resource Sharing for API
+Werkzeug==3.0.1                     # WSGI utilities for Flask
+
+# ===========================================
+# Audio Processing & Analysis
+# ===========================================
+librosa==0.10.2                     # Primary audio analysis and pitch detection
+soundfile==0.12.1                   # Audio file I/O (WAV, FLAC, etc.)
+scipy==1.13.1                       # Signal processing and filtering
+numpy==1.26.4                       # Numerical computing foundation
+pydub==0.25.1                       # Audio format conversion
+resampy==0.4.3                      # High-quality audio resampling
+
+# ===========================================
+# Advanced Pitch Detection
+# ===========================================
+praat-parselmouth==0.4.3            # Professional pitch detection (Praat engine)
+
+# ===========================================
+# Data Handling & Export
+# ===========================================
+pandas==2.2.2                       # Data manipulation and analysis
+openpyxl==3.1.2                     # Excel file creation
+XlsxWriter==3.2.0                   # Advanced Excel formatting
+
+# ===========================================
+# Visualization
+# ===========================================
+plotly==5.22.0                      # Interactive charts (JSON serializable)
+kaleido==0.2.1                      # Static image export for Plotly
+
+# ===========================================
+# Real-Time Communication
+# ===========================================
+python-socketio==5.11.0             # WebSocket support for real-time updates
+eventlet==0.35.2                    # Concurrent networking library
+
+# ===========================================
+# File Handling & Security
+# ===========================================
+python-dotenv==1.0.1                # Environment configuration
+python-magic==0.4.27                # Secure file type validation
+
+# ===========================================
+# Performance & Caching
+# ===========================================
+Flask-Caching==2.1.0                # Server-side caching for better performance
+redis==5.0.1                        # Optional: for production caching
+numba==0.60.0                       # JIT compilation for audio processing
+
+# ===========================================
+# Production Server (Optional)
+# ===========================================
+gunicorn==21.2.0                    # Production WSGI server
+gevent==24.2.1                      # Async worker support
+
+# ===========================================
+# Development Tools (Optional)
+# ===========================================
+python-dotenv==1.0.1                # Environment variables
+Flask-DebugToolbar==0.14.1          # Debugging toolbar

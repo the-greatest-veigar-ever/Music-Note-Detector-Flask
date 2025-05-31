@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Sidebar -->
+    {% include 'components/sidebar.html' %}
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>🎵 Music Note Detector</h1>
+            <p>Advanced audio analysis for musical note detection</p>
+        </header>
+
+        <!-- Tabs -->
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab-button active" onclick="switchTab('file-analysis')">
+                    📁 File Analysis
+                </button>
+                <button class="tab-button" onclick="switchTab('realtime-detection')">
+                    🎤 Real-time Detection
+                </button>
+            </div>
+
+            <!-- File Analysis Tab -->
+            <div id="file-analysis" class="tab-content active">
+                <!-- File Upload Section -->
+                <!-- File Upload Section -->
+                <section class="upload-section">
+                    <h3>Upload Audio File</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="audioFile" accept=".wav,.mp3,.flac,.m4a,.ogg,.wma" style="display: none;">
+                        <div class="upload-prompt">
+                            <span class="upload-icon">📁</span>
+                            <p>Drag and drop your audio file here or click to browse</p>
+                            <button class="btn btn-primary" type="button" onclick="document.getElementById('audioFile').click()">
+                                Choose File
+                            </button>
+                        </div>
+                    </div>
+
+    <!-- Rest of the section remains the same... -->
+
+                    <!-- File Info (hidden by default) -->
+                    <div id="fileInfo" class="file-info" style="display: none;">
+                        <audio id="audioPlayer" controls></audio>
+                        <div class="file-details">
+                            <div class="metric-card">
+                                <div class="metric-label">Duration</div>
+                                <div class="metric-value" id="duration">—</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Format</div>
+                                <div class="metric-value" id="format">—</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Size</div>
+                                <div class="metric-value" id="fileSize">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Visualizations Section -->
+                <section id="visualizations" class="visualizations-section" style="display: none;">
+                    <h3>📊 Audio Visualizations</h3>
+                    <div class="viz-grid">
+                        <div id="waveform" class="viz-container"></div>
+                        <div id="spectrum" class="viz-container"></div>
+                    </div>
+                </section>
+
+                <!-- Analysis Section -->
+                <section id="analysisSection" class="analysis-section" style="display: none;">
+                    <h3>🔬 Note Analysis</h3>
+                    <div class="analysis-controls">
+                        <select id="analysisMode" class="form-select">
+                            <option value="quick">Quick Analysis (1 second intervals)</option>
+                            <option value="standard" selected>Standard Analysis (0.25 second intervals)</option>
+                            <option value="advanced">Advanced Analysis (0.1 second intervals, multi-algorithm)</option>
+                        </select>
+                        <button id="analyzeBtn" class="btn btn-success">
+                            🎯 Analyze
+                        </button>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div id="progressContainer" class="progress-container" style="display: none;">
+                        <div class="progress-bar">
+                            <div id="progressBar" class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="progress-text">Analyzing: 0%</p>
+                    </div>
+
+                    <!-- Results Table -->
+                    <div id="resultsSection" class="results-section" style="display: none;">
+                        <h4>📋 Analysis Results</h4>
+                        <div class="results-controls">
+                            <input type="text" id="searchTime" class="form-input"
+                                   placeholder="Search time (e.g., 00:01:30.5000)">
+                            <div class="export-buttons">
+                                <button class="btn btn-sm" onclick="exportResults('csv')">📄 CSV</button>
+                                <button class="btn btn-sm" onclick="exportResults('excel')">📊 Excel</button>
+                                <button class="btn btn-sm" onclick="exportResults('txt')">📝 Text</button>
+                            </div>
+                        </div>
+                        <div id="resultsTable" class="results-table-container"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Real-time Detection Tab -->
+            <div id="realtime-detection" class="tab-content">
+                <section class="realtime-section">
+                    <div class="detector-container">
+                        <div class="note-display" id="noteDisplay">—</div>
+                        <div class="freq-display" id="freqDisplay">Ready to detect</div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
+                        </div>
+                        <div class="detector-controls">
+                            <button id="startDetection" class="btn btn-primary">
+                                Start Detection
+                            </button>
+                            <button id="stopDetection" class="btn btn-danger" disabled>
+                                Stop Detection
+                            </button>
+                        </div>
+                        <div class="status-message" id="statusMessage">
+                            Click "Start Detection" to begin
+                        </div>
+                    </div>
+
+                    <div class="instructions">
+                        <h4>📝 How to use:</h4>
+                        <ol>
+                            <li>Click the "Start Detection" button above</li>
+                            <li>Allow microphone access when your browser prompts you</li>
+                            <li>Sing or play a musical note near your microphone</li>
+                            <li>The detected note and frequency will appear in real-time</li>
+                            <li>Click "Stop Detection" when you're done</li>
+                        </ol>
+
+                        <h4>💡 Tips for best results:</h4>
+                        <ul>
+                            <li>Sing or play a clear, steady note</li>
+                            <li>Works best in a quiet environment</li>
+                            <li>Try humming or whistling for consistent results</li>
+                            <li>The detector works best with notes between E2 (82 Hz) and B5 (988 Hz)</li>
+                        </ul>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Footer -->
+{% include 'components/footer.html' %}
+{% endblock %}
