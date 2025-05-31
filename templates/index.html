@@ -27,7 +27,6 @@
             <!-- File Analysis Tab -->
             <div id="file-analysis" class="tab-content active">
                 <!-- File Upload Section -->
-                <!-- File Upload Section -->
                 <section class="upload-section">
                     <h3>Upload Audio File</h3>
                     <div class="upload-area" id="uploadArea">
@@ -41,11 +40,55 @@
                         </div>
                     </div>
 
-    <!-- Rest of the section remains the same... -->
-
                     <!-- File Info (hidden by default) -->
                     <div id="fileInfo" class="file-info" style="display: none;">
-                        <audio id="audioPlayer" controls></audio>
+                        <!-- Enhanced Audio Player Section -->
+                        <div class="audio-player-section">
+                            <h4>🎵 Audio Playback Controls</h4>
+                            <div class="audio-player-wrapper">
+                                <audio id="audioPlayer" controls></audio>
+
+                                <!-- Playback Actions - Moved right below audio player -->
+                                <div class="playback-actions">
+                                    <button class="btn btn-secondary" onclick="replayAudio()" title="Replay from beginning">
+                                        🔄 Replay from Start
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="skipBackward(10)" title="Skip backward 10 seconds">
+                                        ⏪ -10s
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="skipForward(10)" title="Skip forward 10 seconds">
+                                        ⏩ +10s
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="setPlaybackSpeed(0.5)" title="Half speed">
+                                        0.5x
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="setPlaybackSpeed(1)" title="Normal speed">
+                                        1x
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="setPlaybackSpeed(2)" title="Double speed">
+                                        2x
+                                    </button>
+                                </div>
+
+                                <!-- Audio Player Instructions - Simplified -->
+                                <div class="player-instructions">
+                                    <h5>Player Controls Guide:</h5>
+                                    <ul class="controls-guide">
+                                        <li>
+                                            <strong>Play/Pause</strong> Click the triangular play button to start playback. It will change to two vertical bars (pause) when playing. Click again to pause.
+                                        </li>
+                                        <li>
+                                            <strong>Volume</strong> Look for the speaker icon. Click it to mute/unmute, or use the volume slider next to it to adjust the sound level.
+                                        </li>
+                                        <li>
+                                            <strong>Download</strong> Click the three dots menu (⋮) on the right side of the player and select "Download" to save the file to your device.
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File Details -->
                         <div class="file-details">
                             <div class="metric-card">
                                 <div class="metric-label">Duration</div>
@@ -159,4 +202,45 @@
 
 <!-- Footer -->
 {% include 'components/footer.html' %}
+
+<!-- JavaScript functions for enhanced controls -->
+<script>
+function replayAudio() {
+    const player = document.getElementById('audioPlayer');
+    player.currentTime = 0;
+    player.play();
+}
+
+function skipBackward(seconds) {
+    const player = document.getElementById('audioPlayer');
+    player.currentTime = Math.max(0, player.currentTime - seconds);
+}
+
+function skipForward(seconds) {
+    const player = document.getElementById('audioPlayer');
+    player.currentTime = Math.min(player.duration, player.currentTime + seconds);
+}
+
+function setPlaybackSpeed(speed) {
+    const player = document.getElementById('audioPlayer');
+    player.playbackRate = speed;
+}
+
+// Tab switching function
+function switchTab(tabId) {
+    // Remove active class from all tabs and contents
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+    // Add active class to selected tab
+    event.target.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+}
+
+// Export results functions
+function exportResults(format) {
+    // These functions would need to be implemented based on your backend
+    console.log(`Exporting results as ${format}`);
+}
+</script>
 {% endblock %}
