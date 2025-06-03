@@ -149,7 +149,26 @@
                                 <button class="btn btn-sm" onclick="exportResults('txt')">📝 Text</button>
                             </div>
                         </div>
-                        <div id="resultsTable" class="results-table-container"></div>
+                        <!-- ► PAGINATION CONTROLS ◄ -->
+                           <div class="pagination-controls">
+                               <!-- Page‐size selector -->
+                               <div class="page-size-selector">
+                                   <label for="pageSize">Show</label>
+                                   <select id="pageSize" class="form-select">
+                                       <option value="20" selected>20</option>
+                                       <option value="30">30</option>
+                                       <option value="50">50</option>
+                                   </select>
+                                   <span>items per page</span>
+                               </div>
+                               <!-- Prev/Next buttons with page indicator -->
+                               <div class="page-navigation">
+                                   <button id="prevPage" class="btn btn-secondary" disabled>Previous</button>
+                                   <span id="currentPage">1</span> / <span id="totalPages">1</span>
+                                   <button id="nextPage" class="btn btn-secondary" disabled>Next</button>
+                               </div>
+                           </div>
+       <div id="resultsTable" class="results-table-container"></div>
                     </div>
                 </section>
             </div>

@@ -14,7 +14,14 @@ let frequencyHistory = [];
 const HISTORY_SIZE = 20;
 const NOTE_THRESHOLD = 0.7;
 let currentFile = null;
-let analysisResults = null;
+// ─────────── PAGINATION STATE ───────────
+let analysisResults = [];     // holds the full, unfiltered array
+let filteredResults = [];     // holds the subset matching the search (initially the same as analysisResults)
+let currentPage = 1;
+let pageSize = 20;
+let totalPages = 1;
+
+
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -43,6 +50,39 @@ function initializeApp() {
     // Search functionality
     const searchInput = document.getElementById('searchTime');
     searchInput.addEventListener('input', filterResults);
+        // ─── PAGINATION EVENTS ───
+    const pageSizeSelect = document.getElementById('pageSize');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+
+    // When the user changes “items per page”
+    pageSizeSelect.addEventListener('change', (e) => {
+        pageSize = parseInt(e.target.value, 10);
+        currentPage = 1;
+
+        // Recompute totalPages and re-render
+        totalPages = Math.ceil(analysisResults.length / pageSize) || 1;
+        document.getElementById('totalPages').textContent = totalPages;
+        document.getElementById('currentPage').textContent = currentPage;
+        renderTablePage();
+    });
+
+    // Previous page
+    prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderTablePage();
+        }
+    });
+
+    // Next page
+    nextBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderTablePage();
+        }
+    });
+
 }
 
 // Theme Management
@@ -209,45 +249,95 @@ function createWaveformPlot(waveformData) {
         }
     };
 
-    const layout = {
-        title: 'Audio Waveform',
-        xaxis: { title: 'Time (seconds)' },
-        yaxis: { title: 'Amplitude' },
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        font: { color: 'var(--text-primary)' }
-    };
+      const layout = {
+    title: 'Audio Waveform',
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: 'var(--text-primary)', size: 12 },
 
-    Plotly.newPlot('waveform', [trace], layout, {responsive: true});
+    /* ─── FORCE X-AXIS TO GO FROM 0 → maxTime ─── */
+    xaxis: {
+      title: 'Time (seconds)',
+      range: [0, maxTime],
+      titlefont: { size: 13, color: 'var(--text-primary)' },
+      tickfont: { size: 10, color: '#aaaaaa' },
+      /* For tick spacing, choose something like  maxTime/10 seconds */
+      dtick: Math.max(1, Math.round(maxTime / 10)),
+      gridcolor: 'rgba(255,255,255,0.15)',
+      zerolinecolor: 'rgba(255,255,255,0.2)'
+    },
+
+    yaxis: {
+      title: 'Amplitude',
+      titlefont: { size: 13, color: 'var(--text-primary)' },
+      tickfont: { size: 10, color: '#aaaaaa' },
+      dtick: 0.1,
+      gridcolor: 'rgba(255,255,255,0.15)',
+      zerolinecolor: 'rgba(255,255,255,0.2)'
+    },
+
+    margin: {
+      l: 60,  // leave space for Y-axis labels
+      r: 20,
+      t: 40,
+      b: 50   // leave space for X-axis labels
+    }
+  };
+
+  Plotly.newPlot('waveform', [trace], layout, { responsive: true });
 }
 
 function createSpectrumPlot(spectrumData) {
-    const trace = {
-        x: spectrumData.x,
-        y: spectrumData.y,
-        type: 'scatter',
-        mode: 'lines',
-        name: 'Spectrum',
-        line: {
-            color: '#06b6d4',
-            width: 1
-        }
-    };
+  const trace = {
+    x: spectrumData.x,
+    y: spectrumData.y,
+    type: 'scatter',
+    mode: 'lines',
+    name: 'Spectrum',
+    line: {
+      color: '#06b6d4',
+      width: 1
+    }
+  };
 
-    const layout = {
-        title: 'Frequency Spectrum',
-        xaxis: {
-            title: 'Frequency (Hz)',
-            type: 'log'
-        },
-        yaxis: { title: 'Magnitude' },
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        font: { color: 'var(--text-primary)' }
-    };
+  const layout = {
+    title: 'Frequency Spectrum',
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: 'var(--text-primary)', size: 12 },
 
-    Plotly.newPlot('spectrum', [trace], layout, {responsive: true});
+    /* ─── FORCE X-AXIS RANGE ─── */
+    xaxis: {
+      title: 'Frequency (Hz)',
+      range: [minFreq, maxFreq],
+      titlefont: { size: 13, color: 'var(--text-primary)' },
+      tickfont: { size: 10, color: '#aaaaaa' },
+      /* If you want a linear axis with “nice” tick spacing: */
+      dtick: Math.max(10, Math.round(maxFreq / 10)),
+      gridcolor: 'rgba(255,255,255,0.15)',
+      zerolinecolor: 'rgba(255,255,255,0.2)'
+    },
+
+    yaxis: {
+      title: 'Magnitude',
+      titlefont: { size: 13, color: 'var(--text-primary)' },
+      tickfont: { size: 10, color: '#aaaaaa' },
+      dtick: 1,
+      gridcolor: 'rgba(255,255,255,0.15)',
+      zerolinecolor: 'rgba(255,255,255,0.2)'
+    },
+
+    margin: {
+      l: 60,  // leave room for Y-axis labels
+      r: 20,
+      t: 40,
+      b: 50  // leave room for X-axis labels
+    }
+  };
+
+  Plotly.newPlot('spectrum', [trace], layout, { responsive: true });
 }
+
 
 // Audio Analysis
 async function analyzeAudio() {
@@ -305,10 +395,48 @@ async function analyzeAudio() {
 }
 
 function displayResults(results) {
-    const resultsSection = document.getElementById('resultsSection');
-    const resultsTable = document.getElementById('resultsTable');
+    analysisResults = results || [];
+    // ─── Initialize filteredResults to be the same as analysisResults ───
+    filteredResults = analysisResults.slice();
 
-    // Create table
+    currentPage = 1;
+    totalPages = Math.ceil(filteredResults.length / pageSize) || 1;
+
+    document.getElementById('totalPages').textContent = totalPages;
+    document.getElementById('currentPage').textContent = currentPage;
+    document.getElementById('prevPage').disabled = true;
+    document.getElementById('nextPage').disabled = (totalPages <= 1);
+
+    document.getElementById('resultsSection').style.display = 'block';
+    renderTablePage();
+}
+
+
+/**
+ * Renders only the rows for the current page in #resultsTable.
+ */
+function renderTablePage() {
+    const resultsTable = document.getElementById('resultsTable');
+    // If there are no filtered results at all, show “no results” and return.
+    if (!filteredResults || filteredResults.length === 0) {
+        resultsTable.innerHTML = '<p>No results found.</p>';
+        return;
+    }
+
+    // Recompute totalPages based on filteredResults
+    totalPages = Math.ceil(filteredResults.length / pageSize) || 1;
+    document.getElementById('totalPages').textContent = totalPages;
+    document.getElementById('currentPage').textContent = currentPage;
+
+    document.getElementById('prevPage').disabled = (currentPage <= 1);
+    document.getElementById('nextPage').disabled = (currentPage >= totalPages);
+
+    // Slice out just the current page (from filteredResults, not analysisResults)
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, filteredResults.length);
+    const pageResults = filteredResults.slice(startIndex, endIndex);
+
+    // Build the table with only this page's rows
     let tableHTML = `
         <table class="results-table">
             <thead>
@@ -323,7 +451,7 @@ function displayResults(results) {
             <tbody>
     `;
 
-    results.forEach(result => {
+    pageResults.forEach(result => {
         tableHTML += `
             <tr>
                 <td>${result.Time}</td>
@@ -336,24 +464,45 @@ function displayResults(results) {
     });
 
     tableHTML += '</tbody></table>';
-
     resultsTable.innerHTML = tableHTML;
-    resultsSection.style.display = 'block';
 }
+
 
 function filterResults() {
-    const searchValue = document.getElementById('searchTime').value.toLowerCase();
-    const rows = document.querySelectorAll('.results-table tbody tr');
+    // 1) Grab the user‐typed search value (in this case, a substring of Time).
+    const searchValue = document.getElementById('searchTime')
+                             .value
+                             .trim()
+                             .toLowerCase();
 
-    rows.forEach(row => {
-        const timeCell = row.cells[0].textContent.toLowerCase();
-        if (timeCell.includes(searchValue)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
+    // 2) If the search field is empty, reset filteredResults to the full array:
+    if (!searchValue) {
+        filteredResults = analysisResults.slice();
+    } else {
+        // Otherwise, keep only those entries whose Time cell includes the search string:
+        filteredResults = analysisResults.filter(result => {
+            // result.Time might be like "00:01:23.456"; convert to lowercase string
+            const timeStr = String(result.Time).toLowerCase();
+            return timeStr.includes(searchValue);
+        });
+    }
+
+    // 3) Reset to page 1 because search results have changed:
+    currentPage = 1;
+
+    // 4) Recompute totalPages based on the new filteredResults length:
+    totalPages = Math.ceil(filteredResults.length / pageSize) || 1;
+    document.getElementById('totalPages').textContent = totalPages;
+    document.getElementById('currentPage').textContent = currentPage;
+
+    // 5) Enable/disable navigation buttons:
+    document.getElementById('prevPage').disabled = true;
+    document.getElementById('nextPage').disabled = (totalPages <= 1);
+
+    // 6) Finally, re-render the first page of filteredResults:
+    renderTablePage();
 }
+
 
 // Export functions
 async function exportResults(format) {
