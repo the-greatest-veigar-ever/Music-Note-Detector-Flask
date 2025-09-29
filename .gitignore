@@ -37,3 +37,6 @@ static/uploads/*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Fly.io
+.fly/
