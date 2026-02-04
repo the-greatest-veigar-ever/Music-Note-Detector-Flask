@@ -1,7 +1,7 @@
 # fly.toml app configuration file generated for note-detector-web on 2024-01-01
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
-app = "note-detector-web"
+app = "music-note-detector"
 primary_region = "sjc"
 
 [build]
