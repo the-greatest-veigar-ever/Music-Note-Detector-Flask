@@ -589,8 +589,8 @@ function updateHistoryUI(note, freq) {
     const li = document.createElement('li');
     li.className = 'history-item';
     li.innerHTML = `
-        <span style="font-weight: 600; color: var(--text-primary);">${note}</span>
-        <span style="font-size: 0.8rem;">${freq.toFixed(1)} Hz</span>
+        <span class="history-note">${note}</span>
+        <span class="history-freq">${freq.toFixed(1)} Hz</span>
     `;
 
     // Insert at top
@@ -734,9 +734,9 @@ function updateDisplay(frequency, confidence) {
 
 async function startRealtimeDetection() {
     try {
-        // Update status
-        document.getElementById('statusMessage').textContent = 'Requesting microphone access...';
-        document.getElementById('statusMessage').className = 'status-message info';
+        // Update status - using new status label if available
+        const freqLabel = document.getElementById('freqDisplay');
+        if (freqLabel) freqLabel.textContent = 'Requesting mic access...';
 
         // Get microphone access with improved settings for voice detection
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -764,8 +764,10 @@ async function startRealtimeDetection() {
         isDetecting = true;
         document.getElementById('startDetection').disabled = true;
         document.getElementById('stopDetection').disabled = false;
-        document.getElementById('statusMessage').textContent = '🎤 Listening... Sing or play a note!';
-        document.getElementById('statusMessage').className = 'status-message success';
+        if (freqLabel) {
+            freqLabel.textContent = '🎤 Listening...';
+            freqLabel.style.color = 'var(--text-main)';
+        }
 
         function detectPitch() {
             if (!isDetecting) return;
@@ -795,8 +797,11 @@ async function startRealtimeDetection() {
 
     } catch (error) {
         console.error('Microphone error:', error);
-        document.getElementById('statusMessage').textContent = 'Error: ' + error.message;
-        document.getElementById('statusMessage').className = 'status-message error';
+        const freqLabel = document.getElementById('freqDisplay');
+        if (freqLabel) {
+            freqLabel.textContent = 'Error: ' + error.message;
+            freqLabel.style.color = 'red';
+        }
         showNotification('Microphone access denied or error occurred', 'error');
     }
 }

@@ -29,16 +29,11 @@ class StaffRenderer {
         // Draw Staff Lines
         for (let i = 0; i < 5; i++) {
             const y = this.topLineY + (i * this.lineSpacing);
-            this.drawLine(0, y, this.width, y, "var(--text-primary)", 1);
+            this.drawLine(0, y, this.width, y, "#000000", 1);
         }
 
-        // Draw Clef (Simplified G-Clef / Treble Clef Path)
-        // This is a rough approximate path for a treble clef
-        const clefPath = "M 15 100 C 15 100 25 100 25 80 C 25 60 10 55 10 40 C 10 25 20 10 30 10 C 40 10 50 25 50 40 C 50 110 20 110 20 90 C 20 80 25 75 30 80 C 35 85 30 95 20 95 C 10 95 10 80 30 60 L 40 30";
-        // Using a text based clef for simplicity and better scaling if font is available, 
-        // but SVG path is safer. Let's use a unicode text fallback for now as path is complex to hand-code.
-        // Actually, drawing a simple text element is easier and looks decent.
-        this.drawText("𝄞", 10, this.topLineY + 35, "40px", "var(--text-primary)");
+        // Draw Clef 
+        this.drawText("𝄞", 10, this.topLineY + 35, "40px", "#000000");
 
         // Create Note Group (to animate)
         this.noteGroup = document.createElementNS(this.ns, "g");
@@ -140,32 +135,30 @@ class StaffRenderer {
         head.setAttribute("cx", x);
         head.setAttribute("cy", y);
         head.setAttribute("r", this.lineSpacing / 2 - 1); // Fit in space
-        head.setAttribute("fill", "var(--text-primary)");
+        head.setAttribute("fill", "#000000");
         this.noteGroup.appendChild(head);
 
         // Draw Ledger Lines if needed
-        // Top line is F5. If y < topLineY - spacing/2
-        // Bottom line is E4. If y > bottomLineY + spacing/2
         const bottomLineY = this.topLineY + (4 * this.lineSpacing);
 
         // Above staff
         let currY = this.topLineY - this.lineSpacing; // A5 Line (first ledger above)
         while (y <= currY + 0.1) { // Tolerance
-            this.drawLine(x - 10, currY, x + 10, currY, "var(--text-primary)", 1);
+            this.drawLine(x - 10, currY, x + 10, currY, "#000000", 1);
             currY -= this.lineSpacing;
         }
         // Middle C (C4) is one ledger line below
         // Below staff
         currY = bottomLineY + this.lineSpacing; // C4 Line (first ledger below)
         while (y >= currY - 0.1) {
-            this.drawLine(x - 10, currY, x + 10, currY, "var(--text-primary)", 1);
+            this.drawLine(x - 10, currY, x + 10, currY, "#000000", 1);
             currY += this.lineSpacing;
         }
 
         // Draw Accidental
         const p = this.parseNote(noteStr);
         if (p && p.accidental === '#') {
-            this.drawText("♯", x - 20, y + 5, "16px", "var(--text-primary)");
+            this.drawText("♯", x - 20, y + 5, "16px", "#000000");
         }
     }
 }

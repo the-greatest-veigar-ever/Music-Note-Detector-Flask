@@ -1,105 +1,86 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Header -->
-<header class="app-header">
-    <div class="app-brand">
-        <h1>Music Note Detector</h1>
-        <p>Stay tuned, get pitch perfect</p>
-    </div>
+<div class="app-container">
+    <header class="header">
+        <h1>Fokus Note</h1>
+        <p>Advanced Real-time Detector</p>
+    </header>
 
-    <div class="theme-toggle-container">
-        <!-- SVG Icons for theme toggle could go here, keeping simple for now -->
-        <button class="icon-btn" title="About">i</button>
-        <button class="icon-btn" title="Dark Mode (Coming Soon)">☾</button>
-    </div>
-</header>
-
-<div class="dashboard-grid">
-    <!-- LEFT PANEL: Main Detector -->
-    <div class="clean-card">
-        <!-- Tab Switching (Voice vs File) -->
-        <div class="tab-controls">
-            <button class="tab-pill active" onclick="switchTab('realtime')">Real-time</button>
-            <button class="tab-pill" onclick="switchTab('upload')">File Upload</button>
-        </div>
-
-        <!-- Real-time View -->
-        <div id="realtime" class="tab-content active" style="width: 100%;">
-            <div class="freq-display" id="freqDisplay">READY TO DETECT</div>
-
-            <div class="note-display" id="noteDisplay">—</div>
-
-            <!-- Musical Staff -->
-            <div class="staff-container" style="display: flex; justify-content: center; margin-bottom: 3rem;">
-                <svg id="staffSvg" width="300" height="150"></svg>
+    <div class="main-grid">
+        <!-- LEFT: Detector Panel -->
+        <main class="card detector-card">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('realtime')">Microphone</button>
+                <button class="tab-btn" onclick="switchTab('upload')">File Upload</button>
             </div>
 
-            <div class="controls">
-                <button id="startDetection" class="btn btn-primary">START</button>
-                <button id="stopDetection" class="btn btn-secondary" disabled>RESET</button>
+            <!-- Content: Real-time -->
+            <div id="realtime" class="tab-content" style="display: block; width: 100%;">
+                <div class="status-label" id="freqDisplay">Ready to listen</div>
+
+                <div class="note-display" id="noteDisplay">—</div>
+
+                <div class="staff-container">
+                    <svg id="staffSvg" width="300" height="150"></svg>
+                </div>
+
+                <button id="startDetection" class="btn btn-pill">Start Detection</button>
+                <button id="stopDetection" class="btn btn-ghost" disabled
+                    style="margin-top: 1rem; display: block; margin-left: auto; margin-right: auto;">Reset</button>
+
+                <div class="confidence-bar-container">
+                    <div class="confidence-fill" id="confidenceBar"></div>
+                </div>
             </div>
 
-            <div class="confidence-bar"
-                style="margin-top: 2rem; width: 50%; margin-left: auto; margin-right: auto; background: #eee;">
-                <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
+            <!-- Content: Upload -->
+            <div id="upload" class="tab-content" style="display: none; width: 100%;">
+                <div class="upload-area" id="dropZone"
+                    style="border: 2px dashed #eee; padding: 4rem 2rem; border-radius: 16px; cursor: pointer; transition: 0.2s;"
+                    onclick="document.getElementById('audioFile').click()" onmouseover="this.style.borderColor='#111'"
+                    onmouseout="this.style.borderColor='#eee'">
+                    <p style="color: #888; font-weight: 500;">Click or Drag Audio File</p>
+                    <input type="file" id="audioFile" accept="audio/*" style="display: none">
+                </div>
+                <div id="fileInfo" style="margin-top: 1rem;"></div>
+                <button id="analyzeBtn" class="btn btn-pill" style="margin-top: 1rem; display: none;">Analyze
+                    File</button>
+                <div id="results"></div>
             </div>
-        </div>
+        </main>
 
-        <!-- File Upload View -->
-        <div id="upload" class="tab-content" style="width: 100%;">
-            <div class="upload-area" id="dropZone" onclick="document.getElementById('audioFile').click()">
-                <p>Click to upload audio file</p>
-                <input type="file" id="audioFile" accept="audio/*" style="display: none">
+        <!-- RIGHT: History Panel -->
+        <aside class="card history-card">
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Detected Notes</h2>
+
+            <div class="input-group" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                <input type="text" placeholder="Add note..." disabled
+                    style="flex: 1; padding: 0.8rem; border: 1px solid #eee; border-radius: 8px; background: #f9f9f9;">
+                <button class="btn btn-pill" style="padding: 0 1.5rem; font-size: 0.9rem;">ADD</button>
             </div>
-            <div id="fileInfo"></div>
-            <button id="analyzeBtn" class="btn btn-primary" style="display: none; width: 100%;">ANALYZE</button>
-            <div id="results" style="margin-top: 2rem;"></div>
-        </div>
-    </div>
 
-    <!-- RIGHT PANEL: History / Tasks -->
-    <div class="history-card">
-        <h2 class="card-title">Detection History</h2>
-
-        <div class="input-group">
-            <input type="text" placeholder="Add a note manually..." disabled
-                style="background: #f5f5f5; cursor: not-allowed;">
-            <button class="btn btn-primary" style="padding: 0.5rem 1.5rem;">ADD</button>
-        </div>
-
-        <div id="historyListContainer">
-            <div class="empty-state">
-                <div class="empty-icon">📝</div>
-                <p>No notes detected yet.</p>
-                <p style="font-size: 0.8rem; margin-top: 0.5rem;">Start the detector to populate history.</p>
+            <div class="empty-state" style="text-align: center; color: #ccc; margin-top: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">♩</div>
+                <p>History is empty</p>
             </div>
-            <ul class="history-list" id="historyList">
-                <!-- History items will be injected here -->
+
+            <ul id="historyList" class="history-list">
+                <!-- Javascript will insert items here -->
             </ul>
-        </div>
-
-        <div
-            style="margin-top: auto; padding-top: 2rem; text-align: center; color: var(--text-tertiary); font-size: 0.8rem;">
-            History is saved for this session
-        </div>
+        </aside>
     </div>
 </div>
 
 <script>
-    function switchTab(tabId) {
-        // Buttons
-        document.querySelectorAll('.tab-pill').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
+    // Minimal Tab Logic
+    function switchTab(id) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.getElementById(id).style.display = 'block';
 
-        // Content
-        document.querySelectorAll('.tab-content').forEach(c => {
-            c.classList.remove('active');
-            c.style.display = 'none';
-        });
-        const activeContent = document.getElementById(tabId);
-        activeContent.classList.add('active');
-        activeContent.style.display = 'block';
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
     }
 </script>
 {% endblock %}
