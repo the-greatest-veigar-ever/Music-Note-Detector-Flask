@@ -579,12 +579,21 @@ async function exportResults(format) {
 }
 
 // Real-time Detection
+let staffRenderer = null; // SVG Renderer
+
 function initializeRealtimeDetection() {
     const startBtn = document.getElementById('startDetection');
     const stopBtn = document.getElementById('stopDetection');
 
     startBtn.addEventListener('click', startRealtimeDetection);
     stopBtn.addEventListener('click', stopRealtimeDetection);
+
+    // Initialize Staff Renderer
+    setTimeout(() => {
+        if (document.getElementById('staffSvg')) {
+            staffRenderer = new StaffRenderer('staffSvg');
+        }
+    }, 100);
 }
 
 function updateDisplay(frequency, confidence) {
@@ -631,6 +640,11 @@ function updateDisplay(frequency, confidence) {
                 document.getElementById('noteDisplay').textContent = mostCommonNote;
                 document.getElementById('noteDisplay').style.opacity = '1';
 
+                // Draw Note on Staff
+                if (staffRenderer) {
+                    staffRenderer.drawNote(mostCommonNote);
+                }
+
                 // Update hold state
                 lastDetectedNote = mostCommonNote;
                 lastDetectionTime = Date.now();
@@ -666,12 +680,22 @@ function updateDisplay(frequency, confidence) {
                 if (lastDetectedNote && (Date.now() - lastDetectionTime < NOTE_HOLD_DURATION)) {
                     document.getElementById('noteDisplay').textContent = lastDetectedNote;
                     document.getElementById('noteDisplay').style.opacity = '0.7'; // Visual cue for "holding"
-                    // Keep frequency display as is or show "..."
+
+                    // Keep drawing the held note
+                    if (staffRenderer) {
+                        staffRenderer.drawNote(lastDetectedNote);
+                    }
+                    // Keep frequency display as is
                 } else {
                     document.getElementById('noteDisplay').textContent = '—';
                     document.getElementById('noteDisplay').style.opacity = '1';
                     document.getElementById('freqDisplay').textContent = 'Listening for voice...';
                     lastDetectedNote = null;
+
+                    // Clear Staff
+                    if (staffRenderer) {
+                        staffRenderer.drawNote(null);
+                    }
                 }
             }
         }

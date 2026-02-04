@@ -1,0 +1,171 @@
+/**
+ * StaffRenderer - Handles SVG rendering of musical staff and notes
+ */
+class StaffRenderer {
+    constructor(svgId) {
+        this.svg = document.getElementById(svgId);
+        this.ns = "http://www.w3.org/2000/svg";
+        this.width = 300;
+        this.height = 150;
+        this.lineSpacing = 10;
+        this.topLineY = 50; // Y position of the top line (F5) on Treble Clef
+
+        // Note to Line/Space mapping (Treble Clef)
+        // Middle C (C4) is way below. 
+        // Calculating offset from a reference note. 
+        // Let's use B4 (center line) as reference = 0.
+        // Higher notes have lower Y (negative offset * half-spacing).
+        this.referenceNote = { note: 'B', octave: 4, index: 6 }; // B4 is index 6 (C=0, D=1...)
+
+        this.initialize();
+    }
+
+    initialize() {
+        // Clear SVG
+        while (this.svg.firstChild) {
+            this.svg.removeChild(this.svg.firstChild);
+        }
+
+        // Draw Staff Lines
+        for (let i = 0; i < 5; i++) {
+            const y = this.topLineY + (i * this.lineSpacing);
+            this.drawLine(0, y, this.width, y, "var(--text-primary)", 1);
+        }
+
+        // Draw Clef (Simplified G-Clef / Treble Clef Path)
+        // This is a rough approximate path for a treble clef
+        const clefPath = "M 15 100 C 15 100 25 100 25 80 C 25 60 10 55 10 40 C 10 25 20 10 30 10 C 40 10 50 25 50 40 C 50 110 20 110 20 90 C 20 80 25 75 30 80 C 35 85 30 95 20 95 C 10 95 10 80 30 60 L 40 30";
+        // Using a text based clef for simplicity and better scaling if font is available, 
+        // but SVG path is safer. Let's use a unicode text fallback for now as path is complex to hand-code.
+        // Actually, drawing a simple text element is easier and looks decent.
+        this.drawText("𝄞", 10, this.topLineY + 35, "40px", "var(--text-primary)");
+
+        // Create Note Group (to animate)
+        this.noteGroup = document.createElementNS(this.ns, "g");
+        this.noteGroup.setAttribute("id", "current-note");
+        this.noteGroup.style.opacity = "0"; // Hidden by default
+        this.noteGroup.style.transition = "opacity 0.2s, transform 0.1s";
+        this.svg.appendChild(this.noteGroup);
+    }
+
+    drawLine(x1, y1, x2, y2, color, width) {
+        const line = document.createElementNS(this.ns, "line");
+        line.setAttribute("x1", x1);
+        line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2);
+        line.setAttribute("y2", y2);
+        line.setAttribute("stroke", color);
+        line.setAttribute("stroke-width", width);
+        this.svg.appendChild(line);
+    }
+
+    drawText(text, x, y, size, color) {
+        const textEl = document.createElementNS(this.ns, "text");
+        textEl.setAttribute("x", x);
+        textEl.setAttribute("y", y);
+        textEl.setAttribute("font-size", size);
+        textEl.setAttribute("fill", color);
+        textEl.textContent = text;
+        this.svg.appendChild(textEl);
+    }
+
+    /**
+     * Calculates the Y position for a given note
+     * @param {string} noteStr - e.g. "C4", "F#5"
+     */
+    calculateY(noteStr) {
+        if (!noteStr || noteStr === "—") return null;
+
+        const p = this.parseNote(noteStr);
+        if (!p) return null;
+
+        // Note indices: C=0, D=1, E=2, F=3, G=4, A=5, B=6
+        // C4 = 0 + 4*7 = 28
+        // B4 = 6 + 4*7 = 34
+
+        const noteValues = { 'C': 0, 'D': 1, 'E': 2, 'F': 3, 'G': 4, 'A': 5, 'B': 6 };
+        const val = noteValues[p.note];
+        const absValue = val + (p.octave * 7);
+
+        // B4 is the middle line (index 2 from top? No)
+        // Lines:
+        // 0: F5
+        // 1: D5
+        // 2: B4 (Middle line)
+        // 3: G4
+        // 4: E4
+
+        // B4 absolute value = 6 + 28 = 34
+        const B4Value = 6 + (4 * 7); // 34
+
+        // Difference in "steps" (lines/spaces)
+        const diff = absValue - B4Value;
+
+        // Each step is half line spacing
+        // Positive diff means higher note -> lower Y
+        const middleLineY = this.topLineY + (2 * this.lineSpacing);
+        return middleLineY - (diff * (this.lineSpacing / 2));
+    }
+
+    parseNote(noteStr) {
+        // Regex to match Note + Optional Sharp + Octave
+        const match = noteStr.match(/^([A-G])(#?)(\d)$/);
+        if (!match) return null;
+        return {
+            note: match[1],
+            accidental: match[2], // '#' or ''
+            octave: parseInt(match[3])
+        };
+    }
+
+    drawNote(noteStr) {
+        // Clear previous note content
+        while (this.noteGroup.firstChild) {
+            this.noteGroup.removeChild(this.noteGroup.firstChild);
+        }
+
+        const y = this.calculateY(noteStr);
+        if (y === null) {
+            this.noteGroup.style.opacity = "0";
+            return;
+        }
+
+        // Show note
+        this.noteGroup.style.opacity = "1";
+        const x = this.width / 2;
+
+        // Draw Note Head
+        const head = document.createElementNS(this.ns, "circle"); // Using circle for simplicity
+        // ellipse might be more "note-like" but circle is fine for SVG mode
+        head.setAttribute("cx", x);
+        head.setAttribute("cy", y);
+        head.setAttribute("r", this.lineSpacing / 2 - 1); // Fit in space
+        head.setAttribute("fill", "var(--text-primary)");
+        this.noteGroup.appendChild(head);
+
+        // Draw Ledger Lines if needed
+        // Top line is F5. If y < topLineY - spacing/2
+        // Bottom line is E4. If y > bottomLineY + spacing/2
+        const bottomLineY = this.topLineY + (4 * this.lineSpacing);
+
+        // Above staff
+        let currY = this.topLineY - this.lineSpacing; // A5 Line (first ledger above)
+        while (y <= currY + 0.1) { // Tolerance
+            this.drawLine(x - 10, currY, x + 10, currY, "var(--text-primary)", 1);
+            currY -= this.lineSpacing;
+        }
+        // Middle C (C4) is one ledger line below
+        // Below staff
+        currY = bottomLineY + this.lineSpacing; // C4 Line (first ledger below)
+        while (y >= currY - 0.1) {
+            this.drawLine(x - 10, currY, x + 10, currY, "var(--text-primary)", 1);
+            currY += this.lineSpacing;
+        }
+
+        // Draw Accidental
+        const p = this.parseNote(noteStr);
+        if (p && p.accidental === '#') {
+            this.drawText("♯", x - 20, y + 5, "16px", "var(--text-primary)");
+        }
+    }
+}
