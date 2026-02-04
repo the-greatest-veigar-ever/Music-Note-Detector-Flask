@@ -578,6 +578,30 @@ async function exportResults(format) {
     }
 }
 
+function updateHistoryUI(note, freq) {
+    const list = document.getElementById('historyList');
+    const emptyState = document.querySelector('.empty-state');
+
+    if (emptyState && emptyState.style.display !== 'none') {
+        emptyState.style.display = 'none';
+    }
+
+    const li = document.createElement('li');
+    li.className = 'history-item';
+    li.innerHTML = `
+        <span style="font-weight: 600; color: var(--text-primary);">${note}</span>
+        <span style="font-size: 0.8rem;">${freq.toFixed(1)} Hz</span>
+    `;
+
+    // Insert at top
+    list.insertBefore(li, list.firstChild);
+
+    // Limit to 10 items
+    if (list.children.length > 10) {
+        list.removeChild(list.lastChild);
+    }
+}
+
 // Real-time Detection
 let staffRenderer = null; // SVG Renderer
 
@@ -654,6 +678,11 @@ function updateDisplay(frequency, confidence) {
                 const sortedFreqs = [...recentFreqs].sort((a, b) => a - b);
                 const medianFreq = sortedFreqs[Math.floor(sortedFreqs.length / 2)];
                 document.getElementById('freqDisplay').textContent = medianFreq.toFixed(1) + ' Hz';
+
+                // Update History UI (Only if changed or sufficiently periodic - basic debounce for now)
+                if (mostCommonNote !== lastDetectedNote) {
+                    updateHistoryUI(mostCommonNote, medianFreq);
+                }
 
                 // Update confidence bar with smoothed confidence
                 const avgConfidence = confidence * 0.3 + (confidence * maxCount / recentNotes.length) * 0.7;
