@@ -1,240 +1,351 @@
 /* 
-   FOKUS THEME - LIGHT & DARK 
+   PREMIUM MINIMALIST THEME
+   Aesthetic: Vercel/Apple-inspired (Inter, Subtle Borders, Refined Shadows)
 */
 
 :root {
-    /* DEFAULT (LIGHT) */
-    --bg-body: #fafafa;
+    /* --- LIGHT THEME (Default) --- */
+    --bg-body: #ffffff;
+    /* Pure white body */
     --bg-card: #ffffff;
+    /* White cards */
+    --bg-subtle: #fafafa;
+    /* Very subtle grey for backgrounds */
 
-    --text-main: #111111;
-    --text-muted: #888888;
+    --text-main: #000000;
+    /* Pure black */
+    --text-secondary: #666666;
+    /* Neutral grey */
+    --text-tertiary: #999999;
+    /* Lighter grey */
 
     --accent-primary: #000000;
+    /* Black actions */
     --accent-hover: #333333;
+    /* Dark grey hover */
+    --accent-fg: #ffffff;
+    /* White text on black buttons */
 
-    --border-light: #eeeeee;
-    --shadow-soft: 0 4px 30px rgba(0, 0, 0, 0.03);
+    --border-color: #eaeaea;
+    /* Very subtle border */
+    --border-hover: #000000;
+    /* Border darkening on hover */
 
-    --font-stack: 'Inter', -apple-system, sans-serif;
+    --focus-ring: 0 0 0 2px rgba(0, 0, 0, 0.1);
+
+    /* Refined Shadows */
+    --shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-hover: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08);
+
+    /* Typography */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
 }
 
 [data-theme="dark"] {
-    /* DARK MODE OVERRIDES */
-    --bg-body: #111111;
-    --bg-card: #1a1a1a;
+    /* --- DARK THEME overrides --- */
+    --bg-body: #0a0a0a;
+    /* Almost black */
+    --bg-card: #000000;
+    /* Pure black cards */
+    --bg-subtle: #111111;
 
-    --text-main: #ffffff;
-    --text-muted: #a0a0a0;
+    --text-main: #ededed;
+    /* Off-white */
+    --text-secondary: #a1a1a1;
+    --text-tertiary: #555555;
 
-    --accent-primary: #ffffff;
-    --accent-hover: #cccccc;
-    /* Invert pill text for contrast */
+    --accent-primary: #ededed;
+    /* White actions */
+    --accent-hover: #ffffff;
+    --accent-fg: #000000;
+    /* Black text on white buttons */
 
-    --border-light: #333333;
-    --shadow-soft: 0 4px 30px rgba(0, 0, 0, 0.5);
+    --border-color: #333333;
+    --border-hover: #ededed;
+
+    --focus-ring: 0 0 0 2px rgba(255, 255, 255, 0.15);
+
+    --shadow-card: 0 0 0 1px #333333;
+    --shadow-hover: 0 0 0 1px #555555;
 }
 
-/* For buttons in dark mode, we need black text on white pill */
-[data-theme="dark"] .btn-pill {
-    color: #000000;
-}
-
-[data-theme="dark"] .tab-btn.active {
-    background: #333333;
-    color: white;
-}
-
-/* Reset & Base */
+/* Base Reset */
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-    font-family: var(--font-stack);
+    font-family: var(--font-sans);
     background-color: var(--bg-body);
     color: var(--text-main);
-    line-height: 1.5;
+    line-height: 1.6;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 2rem;
-    transition: background-color 0.3s, color 0.3s;
+    padding: 2rem 4rem;
+    /* More horizontal padding */
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Typography */
+/* Typography Polish */
 h1,
 h2,
-h3 {
-    font-weight: 700;
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 600;
+    /* Lighter headings */
+    letter-spacing: -0.02em;
+    /* Tight tracking */
     color: var(--text-main);
 }
 
-/* Layout Grid */
+p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+/* --- LAYOUT --- */
 .app-container {
-    max-width: 1100px;
+    max-width: 1200px;
+    /* Wider container */
     margin: 0 auto;
     width: 100%;
 }
 
 .header {
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 3rem;
-    padding-top: 2rem;
-    position: relative;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .header h1 {
-    font-size: 2.5rem;
-    letter-spacing: -0.5px;
+    font-size: 1.5rem;
+    /* Smaller, subtler brand */
+    font-weight: 600;
 }
 
 .header p {
-    color: var(--text-muted);
-    font-size: 1.1rem;
+    display: none;
+    /* Hide subtitle for minimalism */
 }
 
-/* Split Layout */
+/* Main Grid */
 .main-grid {
     display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    /* 60/40 Split */
+    grid-template-columns: 1.2fr 0.8fr;
+    /* Balanced split */
     gap: 2rem;
-    align-items: start;
+    height: calc(100vh - 140px);
+    /* Fill screen minus header */
+    min-height: 600px;
 }
 
-/* Cards */
+/* --- CARDS --- */
 .card {
     background: var(--bg-card);
-    border-radius: 24px;
-    padding: 2.5rem;
-    box-shadow: var(--shadow-soft);
-    border: 1px solid var(--border-light);
-    height: 100%;
-    min-height: 500px;
+    border-radius: 12px;
+    /* Tighter radius */
+    padding: 2rem;
+    box-shadow: var(--shadow-card);
+    transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
-    transition: background-color 0.3s, border-color 0.3s;
+    position: relative;
 }
 
-/* Left Panel Specifics */
+/* Hover effect on cards? No, distracting. Keep static. */
+
 .detector-card {
     align-items: center;
+    justify-content: center;
     text-align: center;
 }
 
-/* Right Panel Specifics */
 .history-card {
-    text-align: left;
+    overflow: hidden;
+    /* For scrolling list */
 }
 
-/* Components */
-.note-display {
-    font-size: 8rem;
-    font-weight: 800;
-    line-height: 1;
-    margin: 2rem 0;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -2px;
-}
-
-.status-label {
-    text-transform: uppercase;
-    font-size: 0.85rem;
-    letter-spacing: 2px;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-bottom: 1rem;
-}
-
-/* Buttons */
-.btn {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-weight: 600;
-    font-family: inherit;
-    transition: all 0.2s ease;
-}
-
-.btn-pill {
-    background: var(--accent-primary);
-    color: white;
-    padding: 1rem 2.5rem;
-    border-radius: 100px;
-    font-size: 1rem;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.btn-pill:hover {
-    background: var(--accent-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-.btn-pill:disabled {
-    background: #cccccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.btn-ghost {
-    color: var(--text-muted);
-    padding: 0.5rem 1rem;
-}
-
-.btn-ghost:hover {
-    color: var(--text-main);
-}
+/* --- COMPONENTS --- */
 
 /* Tabs */
 .tabs {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
-    background: rgba(0, 0, 0, 0.05);
-    /* Adaptive tab bg */
-    padding: 0.5rem;
-    border-radius: 100px;
+    background: var(--bg-subtle);
+    padding: 4px;
+    border-radius: 8px;
+    /* Small radius */
     display: inline-flex;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
 }
 
 .tab-btn {
-    padding: 0.6rem 1.5rem;
-    border-radius: 100px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
     border: none;
     background: transparent;
-    color: var(--text-muted);
-    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--text-main);
 }
 
 .tab-btn.active {
     background: var(--bg-card);
     color: var(--text-main);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-/* History List */
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.btn-pill {
+    appearance: none;
+    height: 40px;
+    /* Standard height */
+    padding: 0 24px;
+    border-radius: 999px;
+    /* Pill */
+    background: var(--accent-primary);
+    color: var(--accent-fg);
+    font-size: 0.9rem;
+}
+
+.btn-pill:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.btn-pill:active {
+    transform: translateY(0);
+}
+
+.btn-pill:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.btn-ghost:hover {
+    background: var(--bg-subtle);
+    color: var(--text-main);
+}
+
+/* Inputs */
+input[type="text"] {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0 12px;
+    height: 40px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    transition: border-color 0.2s;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: var(--text-secondary);
+    box-shadow: var(--focus-ring);
+}
+
+input[type="text"]::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* --- DETECTOR UI --- */
+.note-display {
+    font-size: 8rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -4px;
+    /* Tighter for large text */
+    margin: 1.5rem 0;
+    font-feature-settings: "tnum";
+    /* Tabular numbers if digits */
+}
+
+.status-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.staff-container {
+    margin: 2rem 0;
+    opacity: 0.8;
+}
+
+/* --- HISTORY UI --- */
+.history-card h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
 .history-list {
     list-style: none;
-    margin-top: 1.5rem;
-    width: 100%;
+    overflow-y: auto;
+    flex: 1;
+    /* Fill remaining space */
+    padding-right: 4px;
+    /* Space for scrollbar */
+}
+
+/* Custom Scrollbar */
+.history-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 3px;
 }
 
 .history-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--border-light);
-    animation: fadeIn 0.3s ease;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
 }
 
 .history-item:last-child {
@@ -242,63 +353,66 @@ h3 {
 }
 
 .history-note {
-    font-weight: 700;
-    font-size: 1.2rem;
+    font-weight: 600;
 }
 
 .history-freq {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    font-family: monospace;
+    font-family: var(--font-mono);
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
 }
 
-/* Staff Container */
-.staff-container {
-    margin: 1rem 0 3rem 0;
-    width: 100%;
+.empty-state {
     display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
+    height: 60%;
+    color: var(--text-tertiary);
 }
 
-.staff-container svg {
-    overflow: visible;
+.empty-state div {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+/* --- UTILS --- */
+.input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.5rem;
 }
 
 .confidence-bar-container {
-    width: 200px;
+    width: 60px;
+    /* Small pill */
     height: 4px;
-    background: var(--border-light);
-    border-radius: 4px;
-    margin-top: 2rem;
+    background: var(--border-color);
+    border-radius: 99px;
+    margin: 1rem auto;
     overflow: hidden;
 }
 
 .confidence-bar-fill {
     height: 100%;
-    background: var(--accent-primary);
+    background: var(--text-main);
     width: 0%;
-    transition: width 0.1s ease;
+    transition: width 0.15s ease-out;
 }
 
-/* Mobile */
-@media (max-width: 800px) {
+/* Responsive */
+@media (max-width: 768px) {
+    body {
+        padding: 1rem;
+    }
+
     .main-grid {
         grid-template-columns: 1fr;
+        height: auto;
     }
 
-    .header h1 {
-        font-size: 2rem;
-    }
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(5px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    .card {
+        min-height: 400px;
     }
 }
