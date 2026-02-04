@@ -3,77 +3,89 @@
 {% block content %}
 <div class="app-container">
     <header class="header">
-        <h1>Music Note Detector</h1>
-        <p>Advanced Real-time Detector</p>
-        <button id="themeToggle" class="btn btn-ghost" style="position: absolute; right: 2rem; top: 2rem;">
-            🌓 Theme
+        <div class="header-content">
+            <h1 class="brand-gradient">Music Note Detector</h1>
+        </div>
+        <button id="themeToggle" class="theme-toggle-btn" title="Toggle Theme" aria-label="Toggle Theme">
+            <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
         </button>
     </header>
 
-    <div class="main-grid">
-        <!-- LEFT: Detector Panel -->
-        <main class="card detector-card">
-            <!-- Tabs -->
-            <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('realtime')">Microphone</button>
-                <button class="tab-btn" onclick="switchTab('upload')">File Upload</button>
-            </div>
+    <!-- Main Detector Panel (Centered) -->
+    <main class="card detector-card" style="max-width: 800px; margin: 0 auto;">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('realtime')">Microphone</button>
+            <button class="tab-btn" onclick="switchTab('upload')">File Upload</button>
+        </div>
 
-            <!-- Content: Real-time -->
-            <div id="realtime" class="tab-content" style="display: block; width: 100%;">
-                <div class="status-label" id="freqDisplay">Ready to listen</div>
+        <!-- Content: Real-time -->
+        <div id="realtime" class="tab-content" style="display: block; width: 100%;">
+            <div class="status-label" id="freqDisplay">Ready to listen</div>
 
-                <div class="note-display" id="noteDisplay">—</div>
+            <div class="note-display" id="noteDisplay">—</div>
 
-                <div class="staff-container">
+            <!-- Staff Removed as per user request -->
+            <!-- <div class="staff-container">
                     <svg id="staffSvg" width="300" height="150"></svg>
-                </div>
+                </div> -->
 
-                <button id="startDetection" class="btn btn-pill">Start Detection</button>
-                <button id="stopDetection" class="btn btn-ghost" disabled
-                    style="margin-top: 1rem; display: block; margin-left: auto; margin-right: auto;">Reset</button>
+            <button id="startDetection" class="btn btn-pill">Start Detection</button>
+            <button id="stopDetection" class="btn btn-ghost" disabled
+                style="margin-top: 1rem; display: block; margin-left: auto; margin-right: auto;">Reset</button>
 
-                <div class="confidence-bar-container">
-                    <div class="confidence-fill" id="confidenceBar"></div>
-                </div>
+            <div class="confidence-bar-container">
+                <div class="confidence-fill" id="confidenceBar"></div>
+            </div>
+        </div>
+
+        <!-- Content: Upload -->
+        <div id="upload" class="tab-content" style="display: none; width: 100%;">
+            <div class="upload-area" id="dropZone" onclick="document.getElementById('audioFile').click()">
+                <div class="upload-icon">↓</div>
+                <p>Click or Drop Audio File</p>
+                <p style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.5rem; opacity: 0.8;">Supported:
+                    WAV, MP3, MP4, M4A, FLAC, AAC</p>
+                <input type="file" id="audioFile" accept="audio/*,video/mp4,video/x-m4v" style="display: none">
+            </div>
+            <div id="fileInfo" style="margin-top: 1rem;"></div>
+            <button id="analyzeBtn" class="btn btn-pill" style="margin-top: 1rem; display: none;">Analyze
+                File</button>
+
+            <!-- Visualization Containers -->
+            <div id="visualizations" style="display: none; margin-top: 2rem;">
+                <div id="waveform" style="width: 100%; height: 250px; margin-bottom: 2rem;"></div>
             </div>
 
-            <!-- Content: Upload -->
-            <div id="upload" class="tab-content" style="display: none; width: 100%;">
-                <div class="upload-area" id="dropZone"
-                    style="border: 2px dashed #eee; padding: 4rem 2rem; border-radius: 16px; cursor: pointer; transition: 0.2s;"
-                    onclick="document.getElementById('audioFile').click()" onmouseover="this.style.borderColor='#111'"
-                    onmouseout="this.style.borderColor='#eee'">
-                    <p style="color: #888; font-weight: 500;">Click or Drag Audio File</p>
-                    <input type="file" id="audioFile" accept="audio/*" style="display: none">
-                </div>
-                <div id="fileInfo" style="margin-top: 1rem;"></div>
-                <button id="analyzeBtn" class="btn btn-pill" style="margin-top: 1rem; display: none;">Analyze
-                    File</button>
-                <div id="results"></div>
+            <div id="results"></div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p class="footer-name">Nguyen Minh Quan</p>
+            <div class="footer-links">
+                <a href="https://www.facebook.com/koderqq/" target="_blank" class="footer-link">Facebook</a>
+                <span class="footer-divider">•</span>
+                <a href="https://www.linkedin.com/in/quanng47/" target="_blank" class="footer-link">LinkedIn</a>
             </div>
-        </main>
-
-        <!-- RIGHT: History Panel -->
-        <aside class="card history-card">
-            <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Detected Notes</h2>
-
-            <div class="input-group" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-                <input type="text" placeholder="Add note..." disabled
-                    style="flex: 1; padding: 0.8rem; border: 1px solid #eee; border-radius: 8px; background: #f9f9f9;">
-                <button class="btn btn-pill" style="padding: 0 1.5rem; font-size: 0.9rem;">ADD</button>
-            </div>
-
-            <div class="empty-state" style="text-align: center; color: #ccc; margin-top: 2rem;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">♩</div>
-                <p>History is empty</p>
-            </div>
-
-            <ul id="historyList" class="history-list">
-                <!-- Javascript will insert items here -->
-            </ul>
-        </aside>
-    </div>
+        </div>
+    </footer>
 </div>
 
 <script>

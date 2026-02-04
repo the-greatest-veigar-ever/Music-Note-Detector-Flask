@@ -59,18 +59,29 @@ class AudioProcessor:
             # Load with librosa for consistency
             y, sr = librosa.load(filepath, sr=None)
 
-            # Get file info
-            info = sf.info(filepath)
-
-            metadata = {
-                'duration': len(y) / sr,
-                'sample_rate': sr,
-                'channels': info.channels,
-                'format': info.format,
-                'subtype': info.subtype,
-                'frames': len(y),
-                'file_size': os.path.getsize(filepath)
-            }
+            # Get file info with fallback for non-SoundFile formats (like MP4)
+            try:
+                info = sf.info(filepath)
+                metadata = {
+                    'duration': len(y) / sr,
+                    'sample_rate': sr,
+                    'channels': info.channels,
+                    'format': info.format,
+                    'subtype': info.subtype,
+                    'frames': len(y),
+                    'file_size': os.path.getsize(filepath)
+                }
+            except Exception as e:
+                logger.warning(f"SoundFile could not read metadata for {filepath}: {str(e)}. Using fallback.")
+                metadata = {
+                    'duration': len(y) / sr,
+                    'sample_rate': sr,
+                    'channels': 1 if len(y.shape) == 1 else y.shape[0],
+                    'format': filepath.rsplit('.', 1)[-1].upper(),
+                    'subtype': 'UNKNOWN',
+                    'frames': len(y),
+                    'file_size': os.path.getsize(filepath)
+                }
 
             # Convert to mono if stereo
             if len(y.shape) > 1:

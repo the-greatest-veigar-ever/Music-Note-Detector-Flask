@@ -107,6 +107,7 @@ class StaffRenderer {
     }
 
     parseNote(noteStr) {
+        if (!noteStr) return null;
         // Regex to match Note + Optional Sharp + Octave
         const match = noteStr.match(/^([A-G])(#?)(\d)$/);
         if (!match) return null;
@@ -117,28 +118,66 @@ class StaffRenderer {
         };
     }
 
+    /**
+     * Determines if note needs 8va/8vb folding
+     */
+    getVisualFormatting(noteStr) {
+        if (!noteStr || noteStr === '—') return null;
+        const p = this.parseNote(noteStr);
+        if (!p) return null;
+
+        const noteValues = { 'C': 0, 'D': 1, 'E': 2, 'F': 3, 'G': 4, 'A': 5, 'B': 6 };
+        const val = noteValues[p.note];
+        const absVal = val + (p.octave * 7);
+
+        // Thresholds
+        // C6 (High C) = 42. anything >= C6 shift down.
+        // A3 (Low A) = 26. anything <= A3 shift up.
+
+        const C6 = 42;
+        const A3 = 26;
+
+        let visualOctave = p.octave;
+        let fold = null;
+
+        if (absVal >= C6) {
+            visualOctave = p.octave - 1;
+            fold = '8va';
+        } else if (absVal <= A3) {
+            visualOctave = p.octave + 1;
+            fold = '8vb';
+        }
+
+        // Construct new note string for Y calculation
+        const visualNoteStr = `${p.note}${p.accidental}${visualOctave}`;
+
+        return { visualNoteStr, fold, originalNote: p };
+    }
+
     drawNote(noteStr) {
         // Clear previous note content
         while (this.noteGroup.firstChild) {
             this.noteGroup.removeChild(this.noteGroup.firstChild);
         }
 
-        const y = this.calculateY(noteStr);
-        if (y === null) {
+        const format = this.getVisualFormatting(noteStr);
+        if (!format) {
             this.noteGroup.style.opacity = "0";
             return;
         }
+
+        const y = this.calculateY(format.visualNoteStr);
+        if (y === null) return;
 
         // Show note
         this.noteGroup.style.opacity = "1";
         const x = this.width / 2;
 
         // Draw Note Head
-        const head = document.createElementNS(this.ns, "circle"); // Using circle for simplicity
-        // ellipse might be more "note-like" but circle is fine for SVG mode
+        const head = document.createElementNS(this.ns, "circle");
         head.setAttribute("cx", x);
         head.setAttribute("cy", y);
-        head.setAttribute("r", this.lineSpacing / 2 - 1); // Fit in space
+        head.setAttribute("r", this.lineSpacing / 2 - 1);
         head.setAttribute("fill", this.strokeColor);
         this.noteGroup.appendChild(head);
 
@@ -146,23 +185,59 @@ class StaffRenderer {
         const bottomLineY = this.topLineY + (4 * this.lineSpacing);
 
         // Above staff
-        let currY = this.topLineY - this.lineSpacing; // A5 Line (first ledger above)
-        while (y <= currY + 0.1) { // Tolerance
-            this.drawLine(x - 10, currY, x + 10, currY, this.strokeColor, 1);
+        let currY = this.topLineY - this.lineSpacing;
+        while (y <= currY + 0.1) {
+            this.drawLine(x - 12, currY, x + 12, currY, this.strokeColor, 1);
             currY -= this.lineSpacing;
         }
-        // Middle C (C4) is one ledger line below
         // Below staff
-        currY = bottomLineY + this.lineSpacing; // C4 Line (first ledger below)
+        currY = bottomLineY + this.lineSpacing;
         while (y >= currY - 0.1) {
-            this.drawLine(x - 10, currY, x + 10, currY, this.strokeColor, 1);
+            this.drawLine(x - 12, currY, x + 12, currY, this.strokeColor, 1);
             currY += this.lineSpacing;
         }
 
         // Draw Accidental
-        const p = this.parseNote(noteStr);
-        if (p && p.accidental === '#') {
-            this.drawText("♯", x - 20, y + 5, "16px", this.strokeColor);
+        if (format.originalNote.accidental === '#') {
+            this.drawText("♯", x - 24, y + 5, "20px", this.strokeColor);
+        }
+
+        // Draw 8va / 8vb bracket
+        if (format.fold) {
+            const is8va = format.fold === '8va';
+            const bracketY = is8va ? y - 25 : y + 25;
+            const textY = is8va ? bracketY - 5 : bracketY + 15;
+
+            // Dashed Line
+            const line = document.createElementNS(this.ns, "line");
+            line.setAttribute("x1", x - 20);
+            line.setAttribute("y1", bracketY);
+            line.setAttribute("x2", x + 20);
+            line.setAttribute("y2", bracketY);
+            line.setAttribute("stroke", this.strokeColor);
+            line.setAttribute("stroke-width", "1");
+            line.setAttribute("stroke-dasharray", "4,2");
+            this.noteGroup.appendChild(line);
+
+            // Bracket End
+            const endLine = document.createElementNS(this.ns, "line");
+            endLine.setAttribute("x1", x + 20);
+            endLine.setAttribute("y1", bracketY);
+            endLine.setAttribute("x2", x + 20);
+            endLine.setAttribute("y2", is8va ? bracketY + 5 : bracketY - 5);
+            endLine.setAttribute("stroke", this.strokeColor);
+            endLine.setAttribute("stroke-width", "1");
+            this.noteGroup.appendChild(endLine);
+
+            // Label
+            const text = document.createElementNS(this.ns, "text");
+            text.setAttribute("x", x - 20);
+            text.setAttribute("y", textY);
+            text.setAttribute("font-size", "12px");
+            text.setAttribute("font-style", "italic"); // Music notation style
+            text.setAttribute("fill", this.strokeColor);
+            text.textContent = format.fold;
+            this.noteGroup.appendChild(text);
         }
     }
 }

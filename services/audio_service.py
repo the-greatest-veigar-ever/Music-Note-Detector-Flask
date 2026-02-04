@@ -74,11 +74,11 @@ class AudioService:
             formatted_results = []
             for result in results:
                 formatted_results.append({
-                    'Time': result.get('time_formatted', ''),
-                    'Detected Note': result.get('note', '—'),
-                    'Frequency (Hz)': f"{result.get('frequency', 0):.2f}" if result.get('frequency', 0) > 0 else "—",
-                    'Confidence': f"{result.get('confidence', 0):.2f}",
-                    'Energy': f"{result.get('energy', 0):.3f}"
+                    'time': result.get('time', 0),
+                    'timestamp': result.get('time_formatted', ''),
+                    'note': result.get('note', '—'),
+                    'frequency': result.get('frequency', 0),
+                    'confidence': result.get('confidence', 0)
                 })
                 
             return {

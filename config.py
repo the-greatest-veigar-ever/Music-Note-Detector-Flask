@@ -10,7 +10,7 @@ class Config:
     # File upload config
     UPLOAD_FOLDER = os.path.join('static', 'uploads')
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max file size
-    ALLOWED_EXTENSIONS = {'wav', 'mp3', 'flac', 'm4a', 'ogg', 'wma'}
+    ALLOWED_EXTENSIONS = {'wav', 'mp3', 'flac', 'm4a', 'ogg', 'wma', 'mp4', 'aac', 'acc'}
 
     # Session config
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)

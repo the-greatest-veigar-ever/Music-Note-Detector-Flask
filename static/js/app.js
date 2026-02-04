@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function initializeApp() {
+    console.log("Initializing App...");
     // Theme toggle
     const themeToggle = document.getElementById('themeToggle');
     themeToggle.addEventListener('click', toggleTheme);
@@ -77,47 +78,12 @@ function initializeApp() {
 
     // Analysis button
     const analyzeBtn = document.getElementById('analyzeBtn');
-    analyzeBtn.addEventListener('click', analyzeAudio);
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', analyzeAudio);
+    }
 
     // Real-time detection
     initializeRealtimeDetection();
-
-    // Search functionality
-    const searchInput = document.getElementById('searchTime');
-    searchInput.addEventListener('input', filterResults);
-    // ─── PAGINATION EVENTS ───
-    const pageSizeSelect = document.getElementById('pageSize');
-    const prevBtn = document.getElementById('prevPage');
-    const nextBtn = document.getElementById('nextPage');
-
-    // When the user changes “items per page”
-    pageSizeSelect.addEventListener('change', (e) => {
-        pageSize = parseInt(e.target.value, 10);
-        currentPage = 1;
-
-        // Recompute totalPages and re-render
-        totalPages = Math.ceil(analysisResults.length / pageSize) || 1;
-        document.getElementById('totalPages').textContent = totalPages;
-        document.getElementById('currentPage').textContent = currentPage;
-        renderTablePage();
-    });
-
-    // Previous page
-    prevBtn.addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            renderTablePage();
-        }
-    });
-
-    // Next page
-    nextBtn.addEventListener('click', () => {
-        if (currentPage < totalPages) {
-            currentPage++;
-            renderTablePage();
-        }
-    });
-
 }
 
 // Theme Management
@@ -135,34 +101,45 @@ function toggleTheme() {
     if (staffRenderer) {
         staffRenderer.initialize();
     }
+
+    // Toggle Icons
+    const btn = document.getElementById('themeToggle');
+    const sun = btn.querySelector('.icon-sun');
+    const moon = btn.querySelector('.icon-moon');
+
+    if (newTheme === 'dark') {
+        sun.style.opacity = '0';
+        sun.style.transform = 'rotate(90deg) scale(0.5)';
+        setTimeout(() => { sun.style.display = 'none'; }, 200);
+
+        moon.style.display = 'block';
+        setTimeout(() => {
+            moon.style.opacity = '1';
+            moon.style.transform = 'rotate(0) scale(1)';
+        }, 50);
+    } else {
+        moon.style.opacity = '0';
+        moon.style.transform = 'rotate(-90deg) scale(0.5)';
+        setTimeout(() => { moon.style.display = 'none'; }, 200);
+
+        sun.style.display = 'block';
+        setTimeout(() => {
+            sun.style.opacity = '1';
+            sun.style.transform = 'rotate(0) scale(1)';
+        }, 50);
+    }
 }
 
-// Tab Management
-function switchTab(tabName) {
-    // Hide all tab contents
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(tab => {
-        tab.classList.remove('active');
-    });
-
-    // Remove active class from all tab buttons
-    const tabButtons = document.querySelectorAll('.tab-button');
-    tabButtons.forEach(button => {
-        button.classList.remove('active');
-    });
-
-    // Show selected tab
-    document.getElementById(tabName).classList.add('active');
-
-    // Set active button
-    event.target.classList.add('active');
-}
+// Tab Management (Handled in HTML inline script for simplicity)
+// function switchTab(tabName) { ... } 
 
 // File Upload Management
 
 function initializeFileUpload() {
-    const uploadArea = document.getElementById('uploadArea');
+    const uploadArea = document.getElementById('dropZone');
     const fileInput = document.getElementById('audioFile');
+
+    if (!uploadArea || !fileInput) return;
 
     // Remove the previous click handler and add a proper one
     // The button in the HTML should trigger the file input
@@ -196,62 +173,69 @@ function initializeFileUpload() {
 }
 
 async function handleFileSelect(file) {
-    // Validate file type
-    const allowedTypes = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/flac', 'audio/mp4', 'audio/ogg'];
-    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(wav|mp3|flac|m4a|ogg|wma)$/i)) {
-        showNotification('Please select a valid audio file', 'error');
-        return;
-    }
+    if (!file) return;
 
-    // Check file size (50MB limit)
-    if (file.size > 50 * 1024 * 1024) {
-        showNotification('File size must be less than 50MB', 'error');
-        return;
-    }
+    // Show status
+    const statusDiv = document.getElementById('fileInfo');
+    statusDiv.innerHTML = `<div style="color: var(--text-secondary)">Uploading ${file.name}...</div>`;
 
-    // Upload file
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-        showLoading('Uploading file...');
-
         const response = await fetch('/upload', {
             method: 'POST',
             body: formData
         });
 
-        const data = await response.json();
+        const text = await response.text();
+        let data;
 
-        if (data.success) {
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error("Server returned non-JSON:", text);
+            throw new Error("Server error: " + (text.substring(0, 50) + "..."));
+        }
+
+        if (response.ok && data.success) {
             currentFile = data;
+            statusDiv.innerHTML = `<div style="color: #10b981">✓ Upload complete</div>`;
             displayFileInfo(data);
-            await loadVisualizations(data.filepath);
-            showNotification('File uploaded successfully', 'success');
         } else {
-            showNotification(data.error || 'Upload failed', 'error');
+            throw new Error(data.error || 'Upload failed');
         }
     } catch (error) {
-        showNotification('Upload failed: ' + error.message, 'error');
-    } finally {
-        hideLoading();
+        console.error('Upload Error:', error);
+        statusDiv.innerHTML = `<div style="color: #ef4444">Error: ${error.message}</div>`;
     }
 }
 
 function displayFileInfo(fileData) {
-    // Show file info section
-    document.getElementById('fileInfo').style.display = 'block';
-    document.getElementById('analysisSection').style.display = 'block';
+    const fileInfo = document.getElementById('fileInfo');
+    if (!fileInfo) return;
 
-    // Update audio player - Fix: don't use currentFile directly, use the server URL
-    const audioPlayer = document.getElementById('audioPlayer');
-    // Create a URL for the uploaded file
-    audioPlayer.src = `/static/uploads/${fileData.filename}`;
+    // Create minimal, luxury file info display
+    fileInfo.innerHTML = `
+        <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-top: 2rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+            <div style="width: 48px; height: 48px; background: var(--bg-subtle); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">🎵</div>
+            <div style="flex: 1; min-width: 200px;">
+                <h3 style="margin: 0; font-size: 1rem; font-weight: 600; word-break: break-all;">${fileData.filename}</h3>
+                <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                    ${fileData.format.toUpperCase()} • ${formatDuration(fileData.duration)} • ${formatFileSize(fileData.file_size)}
+                </p>
+            </div>
+            <audio id="audioPlayer" controls src="/static/uploads/${fileData.filename}" style="height: 36px; opacity: 0.8; flex-shrink: 0; min-width: 300px;"></audio>
+        </div>
+        
+        <div id="analysisSection" style="margin-top: 2rem; display: none;">
+             <!-- Placeholder for analysis results if needed -->
+        </div>
+    `;
 
-    // Update file details
-    document.getElementById('duration').textContent = formatDuration(fileData.duration);
-    document.getElementById('format').textContent = fileData.format;
-    document.getElementById('fileSize').textContent = formatFileSize(fileData.file_size);
+    // Show Analyze button
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    if (analyzeBtn) analyzeBtn.style.display = 'inline-flex';
 }
 
 async function loadVisualizations(filepath) {
@@ -268,7 +252,6 @@ async function loadVisualizations(filepath) {
 
         if (data.success) {
             createWaveformPlot(data.visualizations.waveform);
-            createSpectrumPlot(data.visualizations.spectrum);
             document.getElementById('visualizations').style.display = 'block';
         }
     } catch (error) {
@@ -289,6 +272,7 @@ function createWaveformPlot(waveformData) {
         }
     };
 
+    const xMax = Math.max(...waveformData.x);
     const layout = {
         title: 'Audio Waveform',
         paper_bgcolor: 'rgba(0,0,0,0)',
@@ -298,11 +282,11 @@ function createWaveformPlot(waveformData) {
         /* ─── FORCE X-AXIS TO GO FROM 0 → maxTime ─── */
         xaxis: {
             title: 'Time (seconds)',
-            range: [0, maxTime],
+            range: [0, xMax],
             titlefont: { size: 13, color: 'var(--text-primary)' },
             tickfont: { size: 10, color: '#aaaaaa' },
             /* For tick spacing, choose something like  maxTime/10 seconds */
-            dtick: Math.max(1, Math.round(maxTime / 10)),
+            dtick: Math.max(1, Math.round(xMax / 10)),
             gridcolor: 'rgba(255,255,255,0.15)',
             zerolinecolor: 'rgba(255,255,255,0.2)'
         },
@@ -327,58 +311,6 @@ function createWaveformPlot(waveformData) {
     Plotly.newPlot('waveform', [trace], layout, { responsive: true });
 }
 
-function createSpectrumPlot(spectrumData) {
-    const trace = {
-        x: spectrumData.x,
-        y: spectrumData.y,
-        type: 'scatter',
-        mode: 'lines',
-        name: 'Spectrum',
-        line: {
-            color: '#06b6d4',
-            width: 1
-        }
-    };
-
-    const layout = {
-        title: 'Frequency Spectrum',
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        font: { color: 'var(--text-primary)', size: 12 },
-
-        /* ─── FORCE X-AXIS RANGE ─── */
-        xaxis: {
-            title: 'Frequency (Hz)',
-            range: [minFreq, maxFreq],
-            titlefont: { size: 13, color: 'var(--text-primary)' },
-            tickfont: { size: 10, color: '#aaaaaa' },
-            /* If you want a linear axis with “nice” tick spacing: */
-            dtick: Math.max(10, Math.round(maxFreq / 10)),
-            gridcolor: 'rgba(255,255,255,0.15)',
-            zerolinecolor: 'rgba(255,255,255,0.2)'
-        },
-
-        yaxis: {
-            title: 'Magnitude',
-            titlefont: { size: 13, color: 'var(--text-primary)' },
-            tickfont: { size: 10, color: '#aaaaaa' },
-            dtick: 1,
-            gridcolor: 'rgba(255,255,255,0.15)',
-            zerolinecolor: 'rgba(255,255,255,0.2)'
-        },
-
-        margin: {
-            l: 60,  // leave room for Y-axis labels
-            r: 20,
-            t: 40,
-            b: 50  // leave room for X-axis labels
-        }
-    };
-
-    Plotly.newPlot('spectrum', [trace], layout, { responsive: true });
-}
-
-
 // Audio Analysis
 async function analyzeAudio() {
     if (!currentFile) {
@@ -386,16 +318,56 @@ async function analyzeAudio() {
         return;
     }
 
-    const mode = document.getElementById('analysisMode').value;
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
+    // Default analysis mode if element doesn't exist
+    const modeEl = document.getElementById('analysisMode');
+    const mode = modeEl ? modeEl.value : 'basic';
+
+    // Dynamic Progress UI
+    let progressContainer = document.getElementById('progressContainer');
+    let progressBar = document.getElementById('progressBar');
+    let progressText = document.getElementById('progressText');
+
+    if (!progressContainer) {
+        // Create progress UI if missing
+        const resultsDiv = document.getElementById('results') || document.getElementById('fileInfo');
+        if (resultsDiv) {
+            const pDiv = document.createElement('div');
+            pDiv.id = 'progressContainer';
+            pDiv.style.marginTop = '1.5rem';
+            pDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                    <span>Analyzing...</span>
+                    <span id="progressText">0%</span>
+                </div>
+                <div style="height: 6px; background: var(--border-color); border-radius: 99px; overflow: hidden;">
+                    <div id="progressBar" style="width: 0%; height: 100%; background: var(--text-main); transition: width 0.3s ease;"></div>
+                </div>
+            `;
+            resultsDiv.appendChild(pDiv);
+            progressContainer = pDiv;
+            progressBar = pDiv.querySelector('#progressBar');
+            progressText = pDiv.querySelector('#progressText');
+        }
+    }
 
     // Show progress
-    progressContainer.style.display = 'block';
+    if (progressContainer) progressContainer.style.display = 'block';
+
+    // Monitor progress - Start BEFORE the fetch
+    const progressInterval = setInterval(async () => {
+        try {
+            const progressResponse = await fetch(`/progress/${currentFile.filename}`);
+            const progressData = await progressResponse.json();
+
+            if (progressBar) progressBar.style.width = progressData.progress + '%';
+            if (progressText) progressText.textContent = `${progressData.progress}%`;
+        } catch (e) {
+            console.error("Progress poll error:", e);
+        }
+    }, 800);
 
     try {
-        // Start analysis
+        // Start analysis (Blocking call)
         const response = await fetch('/analyze', {
             method: 'POST',
             headers: {
@@ -407,19 +379,13 @@ async function analyzeAudio() {
             })
         });
 
-        // Monitor progress
-        const progressInterval = setInterval(async () => {
-            const progressResponse = await fetch(`/progress/${currentFile.filename}`);
-            const progressData = await progressResponse.json();
-
-            progressBar.style.width = progressData.progress + '%';
-            progressText.textContent = `Analyzing: ${progressData.progress}%`;
-        }, 500);
-
         const data = await response.json();
         clearInterval(progressInterval);
 
         if (data.success) {
+            // Load visualizations only when analysis is finished
+            await loadVisualizations(currentFile.filepath);
+
             analysisResults = data.results;
             displayResults(data.results);
             showNotification('Analysis completed successfully', 'success');
@@ -429,159 +395,133 @@ async function analyzeAudio() {
     } catch (error) {
         showNotification('Analysis failed: ' + error.message, 'error');
     } finally {
-        progressContainer.style.display = 'none';
-        progressBar.style.width = '0%';
+        if (progressContainer) progressContainer.style.display = 'none';
+        if (progressBar) progressBar.style.width = '0%';
     }
 }
 
 function displayResults(results) {
-    analysisResults = results || [];
-    // ─── Initialize filteredResults to be the same as analysisResults ───
-    filteredResults = analysisResults.slice();
+    const resultsDiv = document.getElementById('results');
+    if (!resultsDiv) return;
 
+    if (!results || results.length === 0) {
+        resultsDiv.innerHTML = '<div class="empty-state" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No notes detected in this file.</div>';
+        return;
+    }
+
+    analysisResults = results;
+    filteredResults = [...results]; // Initialize filtered results
     currentPage = 1;
-    totalPages = Math.ceil(filteredResults.length / pageSize) || 1;
 
-    document.getElementById('totalPages').textContent = totalPages;
-    document.getElementById('currentPage').textContent = currentPage;
-    document.getElementById('prevPage').disabled = true;
-    document.getElementById('nextPage').disabled = (totalPages <= 1);
-
-    document.getElementById('resultsSection').style.display = 'block';
     renderTablePage();
 }
+
+function renderTablePage() {
+    const resultsDiv = document.getElementById('results');
+    if (!resultsDiv) return;
+
+    const totalPagesCount = Math.ceil(filteredResults.length / pageSize) || 1;
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    const pageResults = filteredResults.slice(start, end);
+
+    // Premium Table Container with Search & Pagination Controls
+    resultsDiv.innerHTML = `
+        <div style="margin-top: 2rem; animation: slideUp 0.4s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; gap: 2rem; flex-wrap: wrap;">
+                <div>
+                    <h2 style="font-family: var(--font-heading); font-size: 1.25rem; margin: 0 0 0.5rem 0;">Analysis Results</h2>
+                    <div style="position: relative; width: 280px;">
+                        <input type="text" id="timestampSearch" placeholder="Search timestamp (e.g. 00:01)..." 
+                            oninput="filterResults(this.value)"
+                            style="width: 100%; padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem; outline: none; transition: border-color 0.2s;"
+                            onfocus="this.style.borderColor='var(--text-main)'"
+                            onblur="this.style.borderColor='var(--border-color)'"
+                        >
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                    <button class="btn btn-ghost" onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''} style="padding: 0.5rem 1rem;">Previous</button>
+                    <span>Page ${currentPage} of ${totalPagesCount}</span>
+                    <button class="btn btn-ghost" onclick="changePage(1)" ${currentPage === totalPagesCount ? 'disabled' : ''} style="padding: 0.5rem 1rem;">Next</button>
+                </div>
+            </div>
+            
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+                    <thead>
+                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border-color);">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600;">Time</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600;">Note</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        ${pageResults.length > 0 ? pageResults.map(r => `
+                            <tr style="border-bottom: 1px solid var(--border-color-subtle);">
+                                <td style="padding: 1rem; color: var(--text-secondary);">
+                                    ${r.timestamp || (r.time !== undefined && r.time !== null ? r.time.toFixed(2) + 's' : '—')}
+                                </td>
+                                <td style="padding: 1rem; font-family: var(--font-heading); font-weight: 600;">${r.note}</td>
+                            </tr>
+                        `).join('') : `
+                            <tr>
+                                <td colspan="2" style="padding: 3rem; text-align: center; color: var(--text-tertiary);">
+                                    No results match your search
+                                </td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    // Restore focus to search input if it exists
+    const searchInput = document.getElementById('timestampSearch');
+    if (searchInput && window.lastSearchValue) {
+        searchInput.value = window.lastSearchValue;
+        searchInput.focus();
+        // Move cursor to end
+        const len = searchInput.value.length;
+        searchInput.setSelectionRange(len, len);
+    }
+}
+
+function filterResults(query) {
+    window.lastSearchValue = query;
+    const searchTerm = query.toLowerCase().trim();
+
+    if (!searchTerm) {
+        filteredResults = [...analysisResults];
+    } else {
+        filteredResults = analysisResults.filter(r => {
+            const ts = (r.timestamp || "").toLowerCase();
+            const timeVal = (r.time !== undefined ? r.time.toString() : "").toLowerCase();
+            return ts.includes(searchTerm) || timeVal.includes(searchTerm);
+        });
+    }
+
+    currentPage = 1;
+    renderTablePage();
+}
+
+function changePage(delta) {
+    const totalPagesCount = Math.ceil(filteredResults.length / pageSize) || 1;
+    const newPage = currentPage + delta;
+    if (newPage >= 1 && newPage <= totalPagesCount) {
+        currentPage = newPage;
+        renderTablePage();
+        // Scroll to results header
+        document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
 
 
 /**
- * Renders only the rows for the current page in #resultsTable.
+ * Updates the real-time history list UI.
  */
-function renderTablePage() {
-    const resultsTable = document.getElementById('resultsTable');
-    // If there are no filtered results at all, show “no results” and return.
-    if (!filteredResults || filteredResults.length === 0) {
-        resultsTable.innerHTML = '<p>No results found.</p>';
-        return;
-    }
-
-    // Recompute totalPages based on filteredResults
-    totalPages = Math.ceil(filteredResults.length / pageSize) || 1;
-    document.getElementById('totalPages').textContent = totalPages;
-    document.getElementById('currentPage').textContent = currentPage;
-
-    document.getElementById('prevPage').disabled = (currentPage <= 1);
-    document.getElementById('nextPage').disabled = (currentPage >= totalPages);
-
-    // Slice out just the current page (from filteredResults, not analysisResults)
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, filteredResults.length);
-    const pageResults = filteredResults.slice(startIndex, endIndex);
-
-    // Build the table with only this page's rows
-    let tableHTML = `
-        <table class="results-table">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Detected Note</th>
-                    <th>Frequency (Hz)</th>
-                    <th>Confidence</th>
-                    <th>Energy</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    pageResults.forEach(result => {
-        tableHTML += `
-            <tr>
-                <td>${result.Time}</td>
-                <td><strong>${result['Detected Note']}</strong></td>
-                <td>${result['Frequency (Hz)']}</td>
-                <td>${result.Confidence}</td>
-                <td>${result.Energy}</td>
-            </tr>
-        `;
-    });
-
-    tableHTML += '</tbody></table>';
-    resultsTable.innerHTML = tableHTML;
-}
-
-
-function filterResults() {
-    // 1) Grab the user‐typed search value (in this case, a substring of Time).
-    const searchValue = document.getElementById('searchTime')
-        .value
-        .trim()
-        .toLowerCase();
-
-    // 2) If the search field is empty, reset filteredResults to the full array:
-    if (!searchValue) {
-        filteredResults = analysisResults.slice();
-    } else {
-        // Otherwise, keep only those entries whose Time cell includes the search string:
-        filteredResults = analysisResults.filter(result => {
-            // result.Time might be like "00:01:23.456"; convert to lowercase string
-            const timeStr = String(result.Time).toLowerCase();
-            return timeStr.includes(searchValue);
-        });
-    }
-
-    // 3) Reset to page 1 because search results have changed:
-    currentPage = 1;
-
-    // 4) Recompute totalPages based on the new filteredResults length:
-    totalPages = Math.ceil(filteredResults.length / pageSize) || 1;
-    document.getElementById('totalPages').textContent = totalPages;
-    document.getElementById('currentPage').textContent = currentPage;
-
-    // 5) Enable/disable navigation buttons:
-    document.getElementById('prevPage').disabled = true;
-    document.getElementById('nextPage').disabled = (totalPages <= 1);
-
-    // 6) Finally, re-render the first page of filteredResults:
-    renderTablePage();
-}
-
-
-// Export functions
-async function exportResults(format) {
-    if (!analysisResults) {
-        showNotification('No results to export', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/export/${format}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                results: analysisResults,
-                filename: currentFile.filename.split('.')[0]
-            })
-        });
-
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `note_detection_${currentFile.filename.split('.')[0]}_${Date.now()}.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            showNotification(`Results exported as ${format.toUpperCase()}`, 'success');
-        } else {
-            showNotification('Export failed', 'error');
-        }
-    } catch (error) {
-        showNotification('Export failed: ' + error.message, 'error');
-    }
-}
 
 function updateHistoryUI(note, freq) {
     const list = document.getElementById('historyList');
@@ -611,18 +551,21 @@ function updateHistoryUI(note, freq) {
 let staffRenderer = null; // SVG Renderer
 
 function initializeRealtimeDetection() {
+    console.log("Initializing Realtime Detection...");
     const startBtn = document.getElementById('startDetection');
     const stopBtn = document.getElementById('stopDetection');
 
     startBtn.addEventListener('click', startRealtimeDetection);
     stopBtn.addEventListener('click', stopRealtimeDetection);
 
-    // Initialize Staff Renderer
+    // Initialize Staff Renderer (Disabled)
+    /*
     setTimeout(() => {
         if (document.getElementById('staffSvg')) {
             staffRenderer = new StaffRenderer('staffSvg');
         }
     }, 100);
+    */
 }
 
 function updateDisplay(frequency, confidence) {
@@ -738,6 +681,7 @@ function updateDisplay(frequency, confidence) {
 }
 
 async function startRealtimeDetection() {
+    console.log("Start Detection Clicked!");
     try {
         // Update status - using new status label if available
         const freqLabel = document.getElementById('freqDisplay');
@@ -820,23 +764,37 @@ function stopRealtimeDetection() {
         animationId = null;
     }
 
+    // Stop microphone stream tracks
+    if (microphone && microphone.mediaStream) {
+        microphone.mediaStream.getTracks().forEach(track => track.stop());
+    }
+
+    // Close Audio Context
+    if (audioContext && audioContext.state !== 'closed') {
+        audioContext.close().then(() => {
+            audioContext = null;
+            analyser = null;
+            microphone = null;
+        });
+    }
+
     // Clear history
     noteHistory = [];
     frequencyHistory = [];
 
     // Disconnect audio nodes
     if (microphone) {
-        microphone.disconnect();
+        try { microphone.disconnect(); } catch (e) { }
         microphone = null;
     }
 
     if (analyser) {
-        analyser.disconnect();
+        try { analyser.disconnect(); } catch (e) { }
         analyser = null;
     }
 
     if (audioContext) {
-        audioContext.close();
+        try { audioContext.close(); } catch (e) { }
         audioContext = null;
     }
 
@@ -846,8 +804,11 @@ function stopRealtimeDetection() {
     document.getElementById('noteDisplay').textContent = '—';
     document.getElementById('freqDisplay').textContent = 'Ready to detect';
     document.getElementById('confidenceBar').style.width = '0%';
-    document.getElementById('statusMessage').textContent = 'Click "Start Detection" to begin';
-    document.getElementById('statusMessage').className = 'status-message';
+    const statusMsg = document.getElementById('statusMessage');
+    if (statusMsg) {
+        statusMsg.textContent = 'Click "Start Detection" to begin';
+        statusMsg.className = 'status-message';
+    }
 }
 
 
