@@ -59,8 +59,25 @@
             <div class="upload-area" id="dropZone" onclick="document.getElementById('audioFile').click()">
                 <div class="upload-icon">↓</div>
                 <p>Click or Drop Audio File</p>
-                <p style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.5rem; opacity: 0.8;">Supported:
-                    WAV, MP3, MP4, M4A, FLAC, AAC</p>
+                <div style="margin-top: 1rem;">
+                    <p
+                        style="font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem;">
+                        📁 Supported Formats</p>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                        <span
+                            style="background: var(--bg-subtle); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; color: var(--text-secondary); border: 1px solid var(--border-color-subtle);">WAV</span>
+                        <span
+                            style="background: var(--bg-subtle); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; color: var(--text-secondary); border: 1px solid var(--border-color-subtle);">MP3</span>
+                        <span
+                            style="background: var(--bg-subtle); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; color: var(--text-secondary); border: 1px solid var(--border-color-subtle);">FLAC</span>
+                        <span
+                            style="background: var(--bg-subtle); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; color: var(--text-secondary); border: 1px solid var(--border-color-subtle);">M4A</span>
+                        <span
+                            style="background: var(--bg-subtle); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; color: var(--text-secondary); border: 1px solid var(--border-color-subtle);">OGG</span>
+                        <span
+                            style="background: var(--bg-subtle); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; color: var(--text-secondary); border: 1px solid var(--border-color-subtle);">WMA</span>
+                    </div>
+                </div>
                 <input type="file" id="audioFile" accept="audio/*,video/mp4,video/x-m4v" style="display: none">
             </div>
             <div id="fileInfo" style="margin-top: 1rem;"></div>
