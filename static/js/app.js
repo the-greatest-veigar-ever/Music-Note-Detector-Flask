@@ -130,6 +130,11 @@ function toggleTheme() {
 
     // Add transition effect
     document.body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
+
+    // Re-render staff to match new theme
+    if (staffRenderer) {
+        staffRenderer.initialize();
+    }
 }
 
 // Tab Management
