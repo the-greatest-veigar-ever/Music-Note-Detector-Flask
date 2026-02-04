@@ -23,7 +23,7 @@ class Config:
 
     # Pitch detection range
     MIN_FREQUENCY = 80  # Hz (E2)
-    MAX_FREQUENCY = 2000  # Hz (B6)
+    MAX_FREQUENCY = 4500  # Hz (C8)
 
 
 class DevelopmentConfig(Config):

@@ -32,7 +32,7 @@ const VOICE_CONFIG = {
 
     // Frequency range for human voice
     MIN_VOICE_FREQ: 65,
-    MAX_VOICE_FREQ: 2000,
+    MAX_VOICE_FREQ: 4500,
 
     // Spectral characteristics
     MIN_SPECTRAL_CENTROID: 150,
