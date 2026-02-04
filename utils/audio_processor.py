@@ -1,15 +1,16 @@
 """
-Audio processing utilities for file analysis
+Audio processing utilities for file analysis.
 """
 
 import os
+import logging
+from typing import Tuple, List, Dict, Optional, Any, Callable, Union
+
 import numpy as np
 import librosa
 import soundfile as sf
 import parselmouth
 from scipy import signal
-from typing import Tuple, List, Dict, Optional
-import logging
 
 from .note_detector import (
     frequency_to_note,
@@ -22,24 +23,37 @@ from .note_detector import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class AudioProcessor:
-    """Professional audio processing class"""
+    """Professional audio processing class."""
 
-    def __init__(self, config):
-        self.config = config
-        self.sample_rate = config.SAMPLE_RATE
-        self.min_freq = config.MIN_FREQUENCY
-        self.max_freq = config.MAX_FREQUENCY
-
-    def load_audio(self, filepath: str) -> Tuple[np.ndarray, int, Dict]:
+    def __init__(self, config: Any):
         """
-        Load audio file with metadata
+        Initialize AudioProcessor with configuration.
 
         Args:
-            filepath: Path to audio file
+           config: Configuration object containing audio parameters.
+        """
+        self.config = config
+        self.sample_rate = getattr(config, 'SAMPLE_RATE', 22050)
+        self.min_freq = getattr(config, 'MIN_FREQUENCY', 80)
+        self.max_freq = getattr(config, 'MAX_FREQUENCY', 2000)
+
+    def load_audio(self, filepath: str) -> Tuple[np.ndarray, int, Dict[str, Any]]:
+        """
+        Load audio file with metadata.
+
+        Args:
+            filepath: Path to audio file.
 
         Returns:
-            Tuple of (audio_data, sample_rate, metadata)
+            Tuple containing:
+            - audio_data (np.ndarray): The audio signal.
+            - sample_rate (int): The sample rate.
+            - metadata (Dict[str, Any]): Audio file metadata.
+
+        Raises:
+            Exception: If loading fails.
         """
         try:
             # Load with librosa for consistency
@@ -65,19 +79,19 @@ class AudioProcessor:
             return y, sr, metadata
 
         except Exception as e:
-            logger.error(f"Error loading audio file: {str(e)}")
+            logger.error(f"Error loading audio file {filepath}: {str(e)}")
             raise
 
     def preprocess_audio(self, y: np.ndarray, sr: int) -> np.ndarray:
         """
-        Preprocess audio for better pitch detection
+        Preprocess audio for better pitch detection.
 
         Args:
-            y: Audio signal
-            sr: Sample rate
+            y: Audio signal.
+            sr: Sample rate.
 
         Returns:
-            Preprocessed audio signal
+            Preprocessed audio signal.
         """
         # Remove DC offset
         y = y - np.mean(y)
@@ -86,8 +100,11 @@ class AudioProcessor:
         nyquist = sr / 2
         low_cutoff = 50 / nyquist
         if low_cutoff < 1:
-            b, a = signal.butter(5, low_cutoff, btype='high')
-            y = signal.filtfilt(b, a, y)
+            try:
+                b, a = signal.butter(5, low_cutoff, btype='high')
+                y = signal.filtfilt(b, a, y)
+            except Exception as e:
+               logger.warning(f"Filter error (skipping): {e}")
 
         # Normalize
         max_val = np.max(np.abs(y))
@@ -98,54 +115,62 @@ class AudioProcessor:
 
     def detect_pitch_librosa(self, y: np.ndarray, sr: int) -> Tuple[float, float]:
         """
-        Detect pitch using librosa's piptrack
+        Detect pitch using librosa's piptrack.
 
         Args:
-            y: Audio signal
-            sr: Sample rate
+            y: Audio signal.
+            sr: Sample rate.
 
         Returns:
-            Tuple of (frequency, confidence)
+            Tuple of (frequency, confidence).
         """
-        pitches, magnitudes = librosa.piptrack(
-            y=y, sr=sr,
-            fmin=self.min_freq,
-            fmax=self.max_freq,
-            threshold=0.1
-        )
+        try:
+            pitches, magnitudes = librosa.piptrack(
+                y=y, sr=sr,
+                fmin=self.min_freq,
+                fmax=self.max_freq,
+                threshold=0.1
+            )
+        except Exception as e:
+            logger.warning(f"Librosa piptrack failed: {e}")
+            return 0.0, 0.0
 
         # Get the pitch with highest magnitude for each frame
         pitch_values = []
         confidence_values = []
 
-        for t in range(pitches.shape[1]):
-            index = magnitudes[:, t].argmax()
-            pitch = pitches[index, t]
+        # Iterate through frames; optimization: vectorize if possible, but loop is readable for now
+        # given typical segment sizes.
+        if pitches.shape[1] > 0:
+            for t in range(pitches.shape[1]):
+                index = magnitudes[:, t].argmax()
+                pitch = pitches[index, t]
 
-            if pitch > 0:
-                pitch_values.append(pitch)
-                # Normalize magnitude to confidence
-                conf = min(1.0, magnitudes[index, t] / np.max(magnitudes))
-                confidence_values.append(conf)
+                if pitch > 0:
+                    pitch_values.append(pitch)
+                    # Normalize magnitude to confidence
+                    max_mag = np.max(magnitudes)
+                    conf = min(1.0, magnitudes[index, t] / max_mag) if max_mag > 0 else 0
+                    confidence_values.append(conf)
 
         if pitch_values:
             # Use median for robustness
-            frequency = np.median(pitch_values)
-            confidence = np.mean(confidence_values)
+            frequency = float(np.median(pitch_values))
+            confidence = float(np.mean(confidence_values))
             return frequency, confidence
 
         return 0.0, 0.0
 
     def detect_pitch_parselmouth(self, y: np.ndarray, sr: int) -> Tuple[float, float]:
         """
-        Detect pitch using Parselmouth (Praat)
+        Detect pitch using Parselmouth (Praat).
 
         Args:
-            y: Audio signal
-            sr: Sample rate
+            y: Audio signal.
+            sr: Sample rate.
 
         Returns:
-            Tuple of (frequency, confidence)
+            Tuple of (frequency, confidence).
         """
         try:
             # Create Parselmouth Sound object
@@ -159,15 +184,17 @@ class AudioProcessor:
 
             # Get pitch values
             pitch_values = pitch.selected_array['frequency']
+            # Filter zero values (unvoiced)
             pitch_values = pitch_values[pitch_values > 0]
 
             if len(pitch_values) > 0:
                 # Calculate confidence based on pitch strength
                 strength_values = pitch.selected_array['strength']
+                # Filter for when frequency > 0
                 strength_values = strength_values[pitch.selected_array['frequency'] > 0]
 
-                frequency = np.median(pitch_values)
-                confidence = np.mean(strength_values) if len(strength_values) > 0 else 0.5
+                frequency = float(np.median(pitch_values))
+                confidence = float(np.mean(strength_values)) if len(strength_values) > 0 else 0.5
 
                 return frequency, confidence
 
@@ -176,17 +203,17 @@ class AudioProcessor:
 
         return 0.0, 0.0
 
-    def analyze_segment(self, y: np.ndarray, sr: int, method: str = 'advanced') -> Dict:
+    def analyze_segment(self, y: np.ndarray, sr: int, method: str = 'advanced') -> Dict[str, Any]:
         """
-        Analyze a segment of audio
+        Analyze a segment of audio.
 
         Args:
-            y: Audio segment
-            sr: Sample rate
-            method: Detection method ('quick', 'standard', 'advanced')
+            y: Audio segment.
+            sr: Sample rate.
+            method: Detection method ('quick', 'standard', 'advanced').
 
         Returns:
-            Dictionary with analysis results
+            Dictionary with analysis results.
         """
         # Preprocess
         y_processed = self.preprocess_audio(y, sr)
@@ -211,6 +238,8 @@ class AudioProcessor:
 
         elif method == 'standard':
             freq, conf = self.detect_pitch_parselmouth(y_processed, sr)
+            if freq == 0: # Fallback if standard fails
+                 freq, conf = self.detect_pitch_librosa(y_processed, sr)
             note_info = frequency_to_note(freq)
             note_info['confidence'] = conf
             note_info['method'] = 'parselmouth'
@@ -218,38 +247,49 @@ class AudioProcessor:
         else:  # advanced
             note_info = detect_pitch_advanced(y_processed, sr)
 
-        note_info['energy'] = round(energy, 3)
+        note_info['energy'] = round(float(energy), 3)
         return note_info
 
     def analyze_file(self, filepath: str, mode: str = 'standard',
-                    progress_callback: Optional[callable] = None) -> List[Dict]:
+                    progress_callback: Optional[Callable[[float], None]] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """
-        Analyze entire audio file
+        Analyze entire audio file.
 
         Args:
-            filepath: Path to audio file
-            mode: Analysis mode ('quick', 'standard', 'advanced')
-            progress_callback: Optional callback for progress updates
+            filepath: Path to audio file.
+            mode: Analysis mode ('quick', 'standard', 'advanced').
+            progress_callback: Optional callback for progress updates.
 
         Returns:
-            List of analysis results
+            Tuple of (results_list, metadata).
         """
         # Load audio
         y, sr, metadata = self.load_audio(filepath)
 
         # Determine hop length based on mode
+        # Using getattr to fallback safely if config attributes missing
         if mode == 'quick':
-            hop_length = int(sr * self.config.HOP_LENGTH_QUICK)
+            hop_time = getattr(self.config, 'HOP_LENGTH_QUICK', 1.0)
         elif mode == 'standard':
-            hop_length = int(sr * self.config.HOP_LENGTH_STANDARD)
+            hop_time = getattr(self.config, 'HOP_LENGTH_STANDARD', 0.25)
         else:  # advanced
-            hop_length = int(sr * self.config.HOP_LENGTH_ADVANCED)
+            hop_time = getattr(self.config, 'HOP_LENGTH_ADVANCED', 0.1)
+            
+        hop_length = int(sr * hop_time)
 
         # Analyze in segments
         results = []
         total_segments = (len(y) - hop_length) // hop_length + 1
+        
+        if total_segments <= 0:
+             # Handle very short files
+             total_segments = 1
+             hop_length = len(y)
 
-        for i, start in enumerate(range(0, len(y) - hop_length, hop_length)):
+        for i, start in enumerate(range(0, len(y) - hop_length + 1, hop_length)):
+            if start + hop_length > len(y):
+                break
+                
             # Extract segment
             segment = y[start:start + hop_length]
 
@@ -265,13 +305,25 @@ class AudioProcessor:
 
             # Update progress
             if progress_callback:
-                progress = (i + 1) / total_segments
+                progress = min(1.0, (i + 1) / total_segments)
                 progress_callback(progress)
+        
+        # Ensure progress reaches 100%
+        if progress_callback:
+            progress_callback(1.0)
 
         return results, metadata
 
     def _format_time(self, seconds: float) -> str:
-        """Format time in HH:MM:SS.ffff format"""
+        """
+        Format time in HH:MM:SS.ffff format.
+        
+        Args:
+            seconds: Time in seconds.
+            
+        Returns:
+            Formatted time string.
+        """
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
         secs = int(seconds % 60)
@@ -279,15 +331,15 @@ class AudioProcessor:
 
         return f"{hours:02d}:{minutes:02d}:{secs:02d}.{milliseconds:04d}"
 
-    def create_visualizations(self, filepath: str) -> Dict:
+    def create_visualizations(self, filepath: str) -> Dict[str, Any]:
         """
-        Create visualization data for the audio file
+        Create visualization data for the audio file.
 
         Args:
-            filepath: Path to audio file
+            filepath: Path to audio file.
 
         Returns:
-            Dictionary with visualization data
+            Dictionary with visualization data (waveform, spectrum).
         """
         # Load audio with lower sample rate for visualization
         y, sr = librosa.load(filepath, sr=22050, duration=30)  # Limit to 30 seconds

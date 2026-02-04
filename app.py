@@ -1,42 +1,50 @@
 import os
-import json
-from flask import Flask, render_template, request, jsonify, send_file
-from flask import send_from_directory
+import io
+import logging
+from datetime import datetime
+from typing import Dict, Any, Tuple
+
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import pandas as pd
-from datetime import datetime
-import io
-import logging
 
 from config import config
-from utils.audio_processor import AudioProcessor
+from services.audio_service import AudioService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def create_app(config_name='default'):
-    """Create and configure the Flask application"""
+def create_app(config_name: str = 'default') -> Flask:
+    """
+    Create and configure the Flask application.
+
+    Args:
+        config_name: Configuration environment name.
+
+    Returns:
+        Configured Flask application instance.
+    """
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     CORS(app)  # Enable CORS for API calls
-
-    # Ensure upload directory exists
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
+    
+    # Initialize service
+    # We attach it to app to make it accessible if needed, or just keep it global in the module scope 
+    # if strictly necessary, but dependency injection is better.
+    # For this simple flask app, we can initialize it here or inside the app context.
+    # To keep it simple and consistent with previous design, we'll initialize usage based on current config context.
+    
     return app
 
+# Initialize app using environment variable
+env_config = os.environ.get('FLASK_ENV', 'development')
+app = create_app(env_config)
 
-app = create_app(os.environ.get('FLASK_ENV', 'development'))
-
-# Initialize audio processor with the config class (not app.config)
-config_name = os.environ.get('FLASK_ENV', 'development')
-audio_processor = AudioProcessor(config[config_name])
-
-# Store analysis progress (in production, use Redis or similar)
-analysis_progress = {}
+# Initialize Audio Service
+audio_service = AudioService(config[env_config])
 
 
 @app.route('/')
@@ -55,8 +63,16 @@ def health_check():
     })
 
 
-def allowed_file(filename):
-    """Check if file extension is allowed"""
+def allowed_file(filename: str) -> bool:
+    """
+    Check if file extension is allowed.
+
+    Args:
+        filename: Name of the file.
+
+    Returns:
+        True if extension is allowed, False otherwise.
+    """
     return '.' in filename and \
         filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
@@ -87,20 +103,20 @@ def upload_file():
 
             # Load audio metadata
             try:
-                _, _, metadata = audio_processor.load_audio(filepath)
+                metadata = audio_service.load_audio_metadata(filepath)
 
                 return jsonify({
                     'success': True,
                     'filename': unique_filename,
                     'filepath': filepath,
                     'file_size': file_size,
-                    'duration': metadata['duration'],
-                    'sample_rate': metadata['sample_rate'],
-                    'format': ext[1:].upper(),
+                    'duration': metadata.get('duration'),
+                    'sample_rate': metadata.get('sample_rate'),
+                    'format': ext[1:].upper().replace('.', ''),
                     'metadata': metadata
                 })
             except Exception as e:
-                os.remove(filepath)  # Clean up on error
+                audio_service.cleanup_file(filepath)  # Clean up on error
                 return jsonify({'error': f'Invalid audio file: {str(e)}'}), 400
 
         return jsonify({'error': 'File type not allowed'}), 400
@@ -115,47 +131,18 @@ def analyze_audio():
     """Analyze uploaded audio file"""
     try:
         data = request.json
+        if not data:
+             return jsonify({'error': 'No data provided'}), 400
+             
         filepath = data.get('filepath')
         mode = data.get('mode', 'standard')
 
         if not filepath or not os.path.exists(filepath):
             return jsonify({'error': 'File not found'}), 404
 
-        # Start analysis
-        session_id = os.path.basename(filepath)
-        analysis_progress[session_id] = 0
-
-        def progress_callback(progress):
-            analysis_progress[session_id] = int(progress * 100)
-
-        # Perform analysis
-        results, metadata = audio_processor.analyze_file(
-            filepath, mode, progress_callback
-        )
-
-        # Format results for display
-        formatted_results = []
-        for result in results:
-            formatted_results.append({
-                'Time': result['time_formatted'],
-                'Detected Note': result['note'],
-                'Frequency (Hz)': f"{result['frequency']:.2f}" if result['frequency'] > 0 else "—",
-                'Confidence': f"{result['confidence']:.2f}",
-                'Energy': f"{result['energy']:.3f}"
-            })
-
-        # Clean up progress
-        analysis_progress.pop(session_id, None)
-
-        return jsonify({
-            'success': True,
-            'results': formatted_results,
-            'summary': {
-                'total_segments': len(results),
-                'duration': metadata['duration'],
-                'mode': mode
-            }
-        })
+        # Perform analysis via service
+        result_data = audio_service.analyze_audio(filepath, mode)
+        return jsonify(result_data)
 
     except Exception as e:
         logger.error(f"Analysis error: {str(e)}")
@@ -163,9 +150,9 @@ def analyze_audio():
 
 
 @app.route('/progress/<filename>')
-def get_progress(filename):
+def get_progress(filename: str):
     """Get analysis progress"""
-    progress = analysis_progress.get(filename, 0)
+    progress = audio_service.get_progress(filename)
     return jsonify({'progress': progress})
 
 
@@ -174,13 +161,16 @@ def create_visualizations():
     """Create visualization data for audio file"""
     try:
         data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
         filepath = data.get('filepath')
 
         if not filepath or not os.path.exists(filepath):
             return jsonify({'error': 'File not found'}), 404
 
         # Create visualizations
-        viz_data = audio_processor.create_visualizations(filepath)
+        viz_data = audio_service.create_visualizations(filepath)
 
         return jsonify({
             'success': True,
@@ -193,10 +183,13 @@ def create_visualizations():
 
 
 @app.route('/export/<format>', methods=['POST'])
-def export_results(format):
+def export_results(format: str):
     """Export analysis results in different formats"""
     try:
         data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
         results = data.get('results', [])
         filename = data.get('filename', 'results')
 
@@ -285,9 +278,11 @@ def cleanup_file():
     try:
         data = request.json
         filepath = data.get('filepath')
+        
+        if not filepath:
+             return jsonify({'error': 'No filepath provided'}), 400
 
-        if filepath and os.path.exists(filepath):
-            os.remove(filepath)
+        if audio_service.cleanup_file(filepath):
             return jsonify({'success': True, 'message': 'File removed'})
 
         return jsonify({'error': 'File not found'}), 404

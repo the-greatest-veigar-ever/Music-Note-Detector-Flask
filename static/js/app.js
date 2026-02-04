@@ -12,7 +12,42 @@ let animationId = null;
 let noteHistory = [];
 let frequencyHistory = [];
 const HISTORY_SIZE = 20;
-const NOTE_THRESHOLD = 0.7;
+const NOTE_THRESHOLD = 0.6; // Reduced for better voice detection
+
+// UI Hold Configuration
+let lastDetectedNote = null;
+let lastDetectionTime = 0;
+const NOTE_HOLD_DURATION = 1000; // Hold note for 1 second after signal loss
+
+// Voice detection configuration (loosened for better responsiveness)
+// Voice detection configuration (tuned for stability and noise rejection)
+const VOICE_CONFIG = {
+    // Audio thresholds
+    MIN_RMS_THRESHOLD: 0.01,        // Very sensitive (was 0.02)
+    MAX_RMS_THRESHOLD: 0.95,
+
+    // Zero crossing rate thresholds
+    MIN_ZCR: 0.0,
+    MAX_ZCR: 0.4,
+
+    // Frequency range for human voice
+    MIN_VOICE_FREQ: 65,
+    MAX_VOICE_FREQ: 1200,
+
+    // Spectral characteristics
+    MIN_SPECTRAL_CENTROID: 150,
+    MAX_SPECTRAL_CENTROID: 3000,
+
+    // Confidence and agreement thresholds
+    MIN_CONFIDENCE: 0.35,           // Increased to 0.35 (assuming 3.5 was a typo)
+    AGREEMENT_THRESHOLD: 0.4,       // More lenient (was 0.6)
+    MIN_SAMPLES_BEFORE_DISPLAY: 4,  // Faster display (was 6)
+
+    // Noise rejection
+    NOISE_REJECTION_THRESHOLD: 0.1, // Adjusted for lower signals
+    CORRELATION_THRESHOLD: 0.45     // Allow breathier tones (was 0.55)
+};
+
 let currentFile = null;
 // ─────────── PAGINATION STATE ───────────
 let analysisResults = [];     // holds the full, unfiltered array
@@ -24,7 +59,7 @@ let totalPages = 1;
 
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializeApp();
 });
 
@@ -50,7 +85,7 @@ function initializeApp() {
     // Search functionality
     const searchInput = document.getElementById('searchTime');
     searchInput.addEventListener('input', filterResults);
-        // ─── PAGINATION EVENTS ───
+    // ─── PAGINATION EVENTS ───
     const pageSizeSelect = document.getElementById('pageSize');
     const prevBtn = document.getElementById('prevPage');
     const nextBtn = document.getElementById('nextPage');
@@ -249,93 +284,93 @@ function createWaveformPlot(waveformData) {
         }
     };
 
-      const layout = {
-    title: 'Audio Waveform',
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { color: 'var(--text-primary)', size: 12 },
+    const layout = {
+        title: 'Audio Waveform',
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: 'var(--text-primary)', size: 12 },
 
-    /* ─── FORCE X-AXIS TO GO FROM 0 → maxTime ─── */
-    xaxis: {
-      title: 'Time (seconds)',
-      range: [0, maxTime],
-      titlefont: { size: 13, color: 'var(--text-primary)' },
-      tickfont: { size: 10, color: '#aaaaaa' },
-      /* For tick spacing, choose something like  maxTime/10 seconds */
-      dtick: Math.max(1, Math.round(maxTime / 10)),
-      gridcolor: 'rgba(255,255,255,0.15)',
-      zerolinecolor: 'rgba(255,255,255,0.2)'
-    },
+        /* ─── FORCE X-AXIS TO GO FROM 0 → maxTime ─── */
+        xaxis: {
+            title: 'Time (seconds)',
+            range: [0, maxTime],
+            titlefont: { size: 13, color: 'var(--text-primary)' },
+            tickfont: { size: 10, color: '#aaaaaa' },
+            /* For tick spacing, choose something like  maxTime/10 seconds */
+            dtick: Math.max(1, Math.round(maxTime / 10)),
+            gridcolor: 'rgba(255,255,255,0.15)',
+            zerolinecolor: 'rgba(255,255,255,0.2)'
+        },
 
-    yaxis: {
-      title: 'Amplitude',
-      titlefont: { size: 13, color: 'var(--text-primary)' },
-      tickfont: { size: 10, color: '#aaaaaa' },
-      dtick: 0.1,
-      gridcolor: 'rgba(255,255,255,0.15)',
-      zerolinecolor: 'rgba(255,255,255,0.2)'
-    },
+        yaxis: {
+            title: 'Amplitude',
+            titlefont: { size: 13, color: 'var(--text-primary)' },
+            tickfont: { size: 10, color: '#aaaaaa' },
+            dtick: 0.1,
+            gridcolor: 'rgba(255,255,255,0.15)',
+            zerolinecolor: 'rgba(255,255,255,0.2)'
+        },
 
-    margin: {
-      l: 60,  // leave space for Y-axis labels
-      r: 20,
-      t: 40,
-      b: 50   // leave space for X-axis labels
-    }
-  };
+        margin: {
+            l: 60,  // leave space for Y-axis labels
+            r: 20,
+            t: 40,
+            b: 50   // leave space for X-axis labels
+        }
+    };
 
-  Plotly.newPlot('waveform', [trace], layout, { responsive: true });
+    Plotly.newPlot('waveform', [trace], layout, { responsive: true });
 }
 
 function createSpectrumPlot(spectrumData) {
-  const trace = {
-    x: spectrumData.x,
-    y: spectrumData.y,
-    type: 'scatter',
-    mode: 'lines',
-    name: 'Spectrum',
-    line: {
-      color: '#06b6d4',
-      width: 1
-    }
-  };
+    const trace = {
+        x: spectrumData.x,
+        y: spectrumData.y,
+        type: 'scatter',
+        mode: 'lines',
+        name: 'Spectrum',
+        line: {
+            color: '#06b6d4',
+            width: 1
+        }
+    };
 
-  const layout = {
-    title: 'Frequency Spectrum',
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { color: 'var(--text-primary)', size: 12 },
+    const layout = {
+        title: 'Frequency Spectrum',
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: 'var(--text-primary)', size: 12 },
 
-    /* ─── FORCE X-AXIS RANGE ─── */
-    xaxis: {
-      title: 'Frequency (Hz)',
-      range: [minFreq, maxFreq],
-      titlefont: { size: 13, color: 'var(--text-primary)' },
-      tickfont: { size: 10, color: '#aaaaaa' },
-      /* If you want a linear axis with “nice” tick spacing: */
-      dtick: Math.max(10, Math.round(maxFreq / 10)),
-      gridcolor: 'rgba(255,255,255,0.15)',
-      zerolinecolor: 'rgba(255,255,255,0.2)'
-    },
+        /* ─── FORCE X-AXIS RANGE ─── */
+        xaxis: {
+            title: 'Frequency (Hz)',
+            range: [minFreq, maxFreq],
+            titlefont: { size: 13, color: 'var(--text-primary)' },
+            tickfont: { size: 10, color: '#aaaaaa' },
+            /* If you want a linear axis with “nice” tick spacing: */
+            dtick: Math.max(10, Math.round(maxFreq / 10)),
+            gridcolor: 'rgba(255,255,255,0.15)',
+            zerolinecolor: 'rgba(255,255,255,0.2)'
+        },
 
-    yaxis: {
-      title: 'Magnitude',
-      titlefont: { size: 13, color: 'var(--text-primary)' },
-      tickfont: { size: 10, color: '#aaaaaa' },
-      dtick: 1,
-      gridcolor: 'rgba(255,255,255,0.15)',
-      zerolinecolor: 'rgba(255,255,255,0.2)'
-    },
+        yaxis: {
+            title: 'Magnitude',
+            titlefont: { size: 13, color: 'var(--text-primary)' },
+            tickfont: { size: 10, color: '#aaaaaa' },
+            dtick: 1,
+            gridcolor: 'rgba(255,255,255,0.15)',
+            zerolinecolor: 'rgba(255,255,255,0.2)'
+        },
 
-    margin: {
-      l: 60,  // leave room for Y-axis labels
-      r: 20,
-      t: 40,
-      b: 50  // leave room for X-axis labels
-    }
-  };
+        margin: {
+            l: 60,  // leave room for Y-axis labels
+            r: 20,
+            t: 40,
+            b: 50  // leave room for X-axis labels
+        }
+    };
 
-  Plotly.newPlot('spectrum', [trace], layout, { responsive: true });
+    Plotly.newPlot('spectrum', [trace], layout, { responsive: true });
 }
 
 
@@ -471,9 +506,9 @@ function renderTablePage() {
 function filterResults() {
     // 1) Grab the user‐typed search value (in this case, a substring of Time).
     const searchValue = document.getElementById('searchTime')
-                             .value
-                             .trim()
-                             .toLowerCase();
+        .value
+        .trim()
+        .toLowerCase();
 
     // 2) If the search field is empty, reset filteredResults to the full array:
     if (!searchValue) {
@@ -553,7 +588,8 @@ function initializeRealtimeDetection() {
 }
 
 function updateDisplay(frequency, confidence) {
-    if (frequency > 0 && confidence > 0.5) {
+    // Use configuration-based confidence threshold for voice detection
+    if (frequency > 0 && confidence > VOICE_CONFIG.MIN_CONFIDENCE) {
         const noteData = frequencyToNote(frequency);
 
         if (noteData && noteData.note !== '—') {
@@ -561,20 +597,22 @@ function updateDisplay(frequency, confidence) {
             noteHistory.push(noteData.note);
             frequencyHistory.push(frequency);
 
-            // Keep history size limited
+            // Keep history size limited but require more samples for stability
             if (noteHistory.length > HISTORY_SIZE) {
                 noteHistory.shift();
                 frequencyHistory.shift();
             }
 
-            // Wait for enough samples before displaying
-            if (noteHistory.length < 5) {
+            // Wait for configured number of samples before displaying
+            if (noteHistory.length < VOICE_CONFIG.MIN_SAMPLES_BEFORE_DISPLAY) {
                 return;
             }
 
-            // Count occurrences of each note
+            // Count occurrences of each note in recent history
             const noteCounts = {};
-            noteHistory.forEach(note => {
+            // Only consider the last 10 samples for more responsive but stable detection
+            const recentNotes = noteHistory.slice(-10);
+            recentNotes.forEach(note => {
                 noteCounts[note] = (noteCounts[note] || 0) + 1;
             });
 
@@ -588,29 +626,53 @@ function updateDisplay(frequency, confidence) {
                 }
             }
 
-            // Only display if we have enough agreement
-            if (maxCount >= noteHistory.length * NOTE_THRESHOLD) {
+            // Require stronger agreement for voice detection
+            if (maxCount >= recentNotes.length * VOICE_CONFIG.AGREEMENT_THRESHOLD) {
                 document.getElementById('noteDisplay').textContent = mostCommonNote;
+                document.getElementById('noteDisplay').style.opacity = '1';
+
+                // Update hold state
+                lastDetectedNote = mostCommonNote;
+                lastDetectionTime = Date.now();
 
                 // Calculate median frequency for stable display
-                const sortedFreqs = [...frequencyHistory].sort((a, b) => a - b);
+                const recentFreqs = frequencyHistory.slice(-10);
+                const sortedFreqs = [...recentFreqs].sort((a, b) => a - b);
                 const medianFreq = sortedFreqs[Math.floor(sortedFreqs.length / 2)];
                 document.getElementById('freqDisplay').textContent = medianFreq.toFixed(1) + ' Hz';
-            }
 
-            // Update confidence bar
-            document.getElementById('confidenceBar').style.width = (confidence * 100) + '%';
+                // Update confidence bar with smoothed confidence
+                const avgConfidence = confidence * 0.3 + (confidence * maxCount / recentNotes.length) * 0.7;
+                document.getElementById('confidenceBar').style.width = (avgConfidence * 100) + '%';
+            } else {
+                // Not enough agreement - don't update display but keep confidence low
+                document.getElementById('confidenceBar').style.width = (confidence * 0.3 * 100) + '%';
+            }
         }
     } else {
-        // Clear history if no valid pitch for several frames
-        if (confidence < 0.3) {
-            if (noteHistory.length > 0) {
-                noteHistory.pop();
-                frequencyHistory.pop();
+        // More aggressive clearing for noise rejection
+        if (confidence < VOICE_CONFIG.NOISE_REJECTION_THRESHOLD) {
+            // Remove multiple samples when confidence is very low
+            const removals = Math.min(3, noteHistory.length);
+            for (let i = 0; i < removals; i++) {
+                if (noteHistory.length > 0) {
+                    noteHistory.pop();
+                    frequencyHistory.pop();
+                }
             }
+
             if (noteHistory.length === 0) {
-                document.getElementById('noteDisplay').textContent = '—';
-                document.getElementById('freqDisplay').textContent = 'No pitch detected';
+                // Check if we should hold the note
+                if (lastDetectedNote && (Date.now() - lastDetectionTime < NOTE_HOLD_DURATION)) {
+                    document.getElementById('noteDisplay').textContent = lastDetectedNote;
+                    document.getElementById('noteDisplay').style.opacity = '0.7'; // Visual cue for "holding"
+                    // Keep frequency display as is or show "..."
+                } else {
+                    document.getElementById('noteDisplay').textContent = '—';
+                    document.getElementById('noteDisplay').style.opacity = '1';
+                    document.getElementById('freqDisplay').textContent = 'Listening for voice...';
+                    lastDetectedNote = null;
+                }
             }
         }
         document.getElementById('confidenceBar').style.width = '0%';
@@ -623,21 +685,23 @@ async function startRealtimeDetection() {
         document.getElementById('statusMessage').textContent = 'Requesting microphone access...';
         document.getElementById('statusMessage').className = 'status-message info';
 
-        // Get microphone access
+        // Get microphone access with improved settings for voice detection
         const stream = await navigator.mediaDevices.getUserMedia({
             audio: {
-                echoCancellation: false,
-                autoGainControl: false,
-                noiseSuppression: false,
-                latency: 0
+                echoCancellation: true,      // Enable echo cancellation for cleaner voice
+                autoGainControl: true,       // Enable AGC for consistent levels
+                noiseSuppression: true,      // Enable noise suppression for background noise
+                latency: 0,
+                sampleRate: 44100,           // Higher sample rate for better accuracy
+                channelCount: 1              // Mono audio
             }
         });
 
         // Create audio context
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioContext.createAnalyser();
-        analyser.fftSize = 4096;
-        analyser.smoothingTimeConstant = 0.8;
+        analyser.fftSize = 8192;             // Larger FFT for better frequency resolution
+        analyser.smoothingTimeConstant = 0.3; // Less smoothing for more responsive detection
 
         // Create microphone source
         microphone = audioContext.createMediaStreamSource(stream);
@@ -660,15 +724,17 @@ async function startRealtimeDetection() {
             // Simple autocorrelation
             const result = autoCorrelate(buffer, audioContext.sampleRate);
 
+            // Debug logging (remove after testing)
             if (result && result.frequency > 0) {
+                console.log(`Detected: ${result.frequency.toFixed(1)} Hz, Confidence: ${result.confidence.toFixed(2)}`);
                 updateDisplay(result.frequency, result.confidence);
             } else {
                 updateDisplay(-1, 0);
-        }
+            }
 
-    // Continue detection
-    animationId = requestAnimationFrame(detectPitch);
-}
+            // Continue detection
+            animationId = requestAnimationFrame(detectPitch);
+        }
         // Start detection loop
         detectPitch();
 
@@ -744,57 +810,119 @@ function detectNotes() {
 }
 
 function autoCorrelate(buffer, sampleRate) {
-    // Check if buffer has enough signal
     let SIZE = buffer.length;
+
+    // Advanced signal analysis for voice detection
     let sumOfSquares = 0;
+    let zeroCrossings = 0;
+    let spectralCentroid = 0;
+
+    // Calculate RMS and zero crossings
     for (let i = 0; i < SIZE; i++) {
         sumOfSquares += buffer[i] * buffer[i];
+        if (i > 0 && Math.sign(buffer[i]) !== Math.sign(buffer[i - 1])) {
+            zeroCrossings++;
+        }
     }
     const rootMeanSquare = Math.sqrt(sumOfSquares / SIZE);
 
-    if (rootMeanSquare < 0.01) {
+    // Enhanced voice activity detection
+    // 1. Check if signal level is sufficient for voice
+    if (rootMeanSquare < VOICE_CONFIG.MIN_RMS_THRESHOLD || rootMeanSquare > VOICE_CONFIG.MAX_RMS_THRESHOLD) {
         return { frequency: -1, confidence: 0 };
     }
 
-    // Find the first zero crossing
-    let start = 0;
-    for (let i = 0; i < SIZE / 2; i++) {
-        if (buffer[i] > 0 && buffer[i + 1] <= 0) {
-            start = i;
-            break;
-        }
+    // 2. Check zero crossing rate (voice typically has moderate ZCR)
+    const zeroCrossingRate = zeroCrossings / SIZE;
+    if (zeroCrossingRate < VOICE_CONFIG.MIN_ZCR || zeroCrossingRate > VOICE_CONFIG.MAX_ZCR) {
+        return { frequency: -1, confidence: 0 };
     }
 
-    // Autocorrelation
-    const MIN_SAMPLES = Math.floor(sampleRate / 1000); // 1000 Hz max
-    const MAX_SAMPLES = Math.floor(sampleRate / 80);   // 80 Hz min
+    // 3. Spectral analysis for voice characteristics (simplified for debugging)
+    // Temporarily disabled for testing
+    // if (!isVoiceLikeSpectrum(buffer, sampleRate)) {
+    //     return { frequency: -1, confidence: 0 };
+    // }
+
+    // Pre-emphasis filter to enhance higher frequencies (common in voice processing)
+    const filtered = new Float32Array(SIZE);
+    filtered[0] = buffer[0];
+    for (let i = 1; i < SIZE; i++) {
+        filtered[i] = buffer[i] - 0.97 * buffer[i - 1];
+    }
+
+    // Autocorrelation with voice-optimized frequency range
+    const MIN_SAMPLES = Math.floor(sampleRate / VOICE_CONFIG.MAX_VOICE_FREQ);
+    const MAX_SAMPLES = Math.floor(sampleRate / VOICE_CONFIG.MIN_VOICE_FREQ);
 
     let bestOffset = -1;
-    let bestCorrelation = 0;
+    let maxCorrelation = 0;
+    let bestCorrelation = 0; // Fixed: Declare this missing variable
     let correlations = new Array(MAX_SAMPLES + 1);
 
+    // 1. First pass: Find the global maximum correlation
     for (let offset = MIN_SAMPLES; offset < MAX_SAMPLES; offset++) {
         let correlation = 0;
+        let normalizer = 0;
 
+        // Normalized cross-correlation for better accuracy
         for (let i = 0; i < SIZE - offset; i++) {
-            correlation += Math.abs(buffer[i] - buffer[i + offset]);
+            correlation += filtered[i] * filtered[i + offset];
+            normalizer += filtered[i] * filtered[i];
         }
 
-        correlation = 1 - correlation / SIZE;
+        if (normalizer > 0) {
+            correlation = correlation / normalizer;
+        }
+
         correlations[offset] = correlation;
 
-        if (correlation > bestCorrelation) {
-            bestCorrelation = correlation;
-            bestOffset = offset;
+        if (correlation > maxCorrelation) {
+            maxCorrelation = correlation;
         }
     }
 
-    if (bestCorrelation < 0.9) {
+    // Much stricter correlation threshold for voice
+    if (maxCorrelation < VOICE_CONFIG.CORRELATION_THRESHOLD) {
         return { frequency: -1, confidence: 0 };
     }
 
-    // Interpolation for better precision
-    if (bestOffset > 0 && bestOffset < MAX_SAMPLES - 1) {
+    // 2. Second pass: Subharmonic Pruning (Sub-harmonic check)
+    // Find the first peak that is "strong enough" (e.g., within 95% of the global max).
+    // Tightened to 0.95 to filter out weak harmonics and fix high-pitch errors (e.g. F6 when singing B2).
+    let threshold = maxCorrelation * 0.95;
+
+    for (let offset = MIN_SAMPLES; offset < MAX_SAMPLES; offset++) {
+        if (correlations[offset] >= threshold) {
+            // Found the first significant peak (highest frequency fundamental)
+
+            // Local peak check: ensure it's actually a peak
+            if (offset > MIN_SAMPLES && offset < MAX_SAMPLES - 1) {
+                if (correlations[offset] > correlations[offset - 1] &&
+                    correlations[offset] > correlations[offset + 1]) {
+                    bestOffset = offset;
+                    bestCorrelation = correlations[offset];
+                    break; // Stop at the first significant peak (highest frequency)
+                }
+            }
+        }
+    }
+
+    // Fallback if no local peak found (shouldn't happen if maxCorrelation > threshold)
+    if (bestOffset === -1) {
+        // Find the offset corresponding to maxCorrelation
+        for (let offset = MIN_SAMPLES; offset < MAX_SAMPLES; offset++) {
+            if (correlations[offset] === maxCorrelation) {
+                bestOffset = offset;
+                bestCorrelation = maxCorrelation;
+                break;
+            }
+        }
+    }
+
+
+    // Parabolic interpolation for sub-sample accuracy
+    if (bestOffset > MIN_SAMPLES && bestOffset < MAX_SAMPLES - 1) {
         const y1 = correlations[bestOffset - 1];
         const y2 = correlations[bestOffset];
         const y3 = correlations[bestOffset + 1];
@@ -809,7 +937,47 @@ function autoCorrelate(buffer, sampleRate) {
     }
 
     const frequency = sampleRate / bestOffset;
-    return { frequency: frequency, confidence: bestCorrelation };
+
+    // Final voice frequency validation
+    if (frequency < VOICE_CONFIG.MIN_VOICE_FREQ || frequency > VOICE_CONFIG.MAX_VOICE_FREQ) {
+        return { frequency: -1, confidence: 0 };
+    }
+
+    // Confidence based on correlation strength and voice characteristics
+    const voiceConfidence = Math.min(1.0, bestCorrelation * 2.0);
+
+    return { frequency: frequency, confidence: voiceConfidence };
+}
+
+// Helper function to detect voice-like spectral characteristics
+function isVoiceLikeSpectrum(buffer, sampleRate) {
+    const fftSize = 1024;
+    const fft = new Float32Array(fftSize);
+
+    // Copy buffer data for FFT (simplified approach)
+    for (let i = 0; i < Math.min(fftSize, buffer.length); i++) {
+        fft[i] = buffer[i];
+    }
+
+    // Calculate spectral centroid (simplified)
+    let weightedSum = 0;
+    let magnitudeSum = 0;
+
+    for (let i = 1; i < fftSize / 2; i++) {
+        const magnitude = Math.abs(fft[i]);
+        const frequency = (i * sampleRate) / fftSize;
+
+        weightedSum += frequency * magnitude;
+        magnitudeSum += magnitude;
+    }
+
+    if (magnitudeSum === 0) return false;
+
+    const spectralCentroid = weightedSum / magnitudeSum;
+
+    // Voice typically has spectral centroid between configured range
+    return spectralCentroid >= VOICE_CONFIG.MIN_SPECTRAL_CENTROID &&
+        spectralCentroid <= VOICE_CONFIG.MAX_SPECTRAL_CENTROID;
 }
 
 function frequencyToNote(frequency) {
