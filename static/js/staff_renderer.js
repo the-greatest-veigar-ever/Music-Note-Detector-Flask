@@ -26,14 +26,18 @@ class StaffRenderer {
             this.svg.removeChild(this.svg.firstChild);
         }
 
+        // Determine color based on theme
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        this.strokeColor = isDark ? '#ffffff' : '#000000';
+
         // Draw Staff Lines
         for (let i = 0; i < 5; i++) {
             const y = this.topLineY + (i * this.lineSpacing);
-            this.drawLine(0, y, this.width, y, "#000000", 1);
+            this.drawLine(0, y, this.width, y, this.strokeColor, 1);
         }
 
         // Draw Clef 
-        this.drawText("𝄞", 10, this.topLineY + 35, "40px", "#000000");
+        this.drawText("𝄞", 10, this.topLineY + 35, "40px", this.strokeColor);
 
         // Create Note Group (to animate)
         this.noteGroup = document.createElementNS(this.ns, "g");
@@ -135,7 +139,7 @@ class StaffRenderer {
         head.setAttribute("cx", x);
         head.setAttribute("cy", y);
         head.setAttribute("r", this.lineSpacing / 2 - 1); // Fit in space
-        head.setAttribute("fill", "#000000");
+        head.setAttribute("fill", this.strokeColor);
         this.noteGroup.appendChild(head);
 
         // Draw Ledger Lines if needed
@@ -144,21 +148,21 @@ class StaffRenderer {
         // Above staff
         let currY = this.topLineY - this.lineSpacing; // A5 Line (first ledger above)
         while (y <= currY + 0.1) { // Tolerance
-            this.drawLine(x - 10, currY, x + 10, currY, "#000000", 1);
+            this.drawLine(x - 10, currY, x + 10, currY, this.strokeColor, 1);
             currY -= this.lineSpacing;
         }
         // Middle C (C4) is one ledger line below
         // Below staff
         currY = bottomLineY + this.lineSpacing; // C4 Line (first ledger below)
         while (y >= currY - 0.1) {
-            this.drawLine(x - 10, currY, x + 10, currY, "#000000", 1);
+            this.drawLine(x - 10, currY, x + 10, currY, this.strokeColor, 1);
             currY += this.lineSpacing;
         }
 
         // Draw Accidental
         const p = this.parseNote(noteStr);
         if (p && p.accidental === '#') {
-            this.drawText("♯", x - 20, y + 5, "16px", "#000000");
+            this.drawText("♯", x - 20, y + 5, "16px", this.strokeColor);
         }
     }
 }

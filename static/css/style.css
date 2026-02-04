@@ -1,30 +1,48 @@
 /* 
-   FOKUS LIGHT THEME - RESET & REDESIGN
-   Aesthetic: Clean, Minimalist, White/Black
+   FOKUS THEME - LIGHT & DARK 
 */
 
 :root {
-    /* Color Palette */
+    /* DEFAULT (LIGHT) */
     --bg-body: #fafafa;
-    /* Off-white background */
     --bg-card: #ffffff;
-    /* Pure white cards */
 
     --text-main: #111111;
-    /* Jet black for primary text */
     --text-muted: #888888;
-    /* Grey for secondary text */
 
     --accent-primary: #000000;
-    /* Black buttons */
     --accent-hover: #333333;
-    /* Dark grey hover */
 
     --border-light: #eeeeee;
     --shadow-soft: 0 4px 30px rgba(0, 0, 0, 0.03);
 
-    /* Typography */
     --font-stack: 'Inter', -apple-system, sans-serif;
+}
+
+[data-theme="dark"] {
+    /* DARK MODE OVERRIDES */
+    --bg-body: #111111;
+    --bg-card: #1a1a1a;
+
+    --text-main: #ffffff;
+    --text-muted: #a0a0a0;
+
+    --accent-primary: #ffffff;
+    --accent-hover: #cccccc;
+    /* Invert pill text for contrast */
+
+    --border-light: #333333;
+    --shadow-soft: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* For buttons in dark mode, we need black text on white pill */
+[data-theme="dark"] .btn-pill {
+    color: #000000;
+}
+
+[data-theme="dark"] .tab-btn.active {
+    background: #333333;
+    color: white;
 }
 
 /* Reset & Base */
@@ -43,6 +61,7 @@ body {
     display: flex;
     flex-direction: column;
     padding: 2rem;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 /* Typography */
@@ -64,6 +83,7 @@ h3 {
     text-align: center;
     margin-bottom: 3rem;
     padding-top: 2rem;
+    position: relative;
 }
 
 .header h1 {
@@ -96,6 +116,7 @@ h3 {
     min-height: 500px;
     display: flex;
     flex-direction: column;
+    transition: background-color 0.3s, border-color 0.3s;
 }
 
 /* Left Panel Specifics */
@@ -176,7 +197,8 @@ h3 {
     justify-content: center;
     gap: 0.5rem;
     margin-bottom: 2rem;
-    background: #f7f7f7;
+    background: rgba(0, 0, 0, 0.05);
+    /* Adaptive tab bg */
     padding: 0.5rem;
     border-radius: 100px;
     display: inline-flex;
@@ -194,7 +216,7 @@ h3 {
 }
 
 .tab-btn.active {
-    background: white;
+    background: var(--bg-card);
     color: var(--text-main);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
@@ -239,14 +261,13 @@ h3 {
 }
 
 .staff-container svg {
-    /* Ensure clean rendering */
     overflow: visible;
 }
 
 .confidence-bar-container {
     width: 200px;
     height: 4px;
-    background: #eeeeee;
+    background: var(--border-light);
     border-radius: 4px;
     margin-top: 2rem;
     overflow: hidden;
@@ -254,7 +275,7 @@ h3 {
 
 .confidence-bar-fill {
     height: 100%;
-    background: var(--text-main);
+    background: var(--accent-primary);
     width: 0%;
     transition: width 0.1s ease;
 }
